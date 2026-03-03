@@ -26,13 +26,13 @@ If you are an experimental biologist asking these questions, **PhyloCGN** is for
 This tool requires the following command-line tools.
 
 ### 1. Software Dependencies
-Please consider to install these tools into your machine.
+Please consider to install these tools into your machine. In addition, these command names should be as the listed way.
 
 - System: curl, unzip, ruby (sequel via gem), sqlite3 
 - Bioinformatics:
   - datasets (NCBI Command Line Tool)
   - diamond (Sequence Aligner)
-  - mmseqs2 (Sequence Search & Clustering)
+  - mmseqs (Sequence Search & Clustering)
   - seqkit (FASTA/Q Manipulation)
   - muscle5 (Multiple Sequence Alignment)
   - VeryFastTree (Phylogenetic Tree Construction)
@@ -58,7 +58,11 @@ files: {
 }
 ```
 
-### 3. Run Analysis
+### 3. Set NCBI API key
+Set env var via ```export NCBI_API_KEY="XXX"``` in your .zshrc or directly put in the Rakefile. It is required for downloading the genomic data.
+NCBI API KEY can get from [ncbi web site](https://www.ncbi.nlm.nih.gov) wen you make your account.
+
+### 4. Run Analysis
 Execute the full pipeline with a single command:
 
 ```bash
@@ -66,11 +70,17 @@ rake do_all
 ```
 
 _To see all available tasks, run:_ ```rake -T```
-### 4. Check Results
+
+First run time should need a huge data for downloading genomic data from ncbi and constructing mmseqs database for analysis.
+
+### 5. Check Results
 All results, including phylogenetic trees and conserved genomic neighborhood data, will be stored in the output folder.
 
 ### 5. showing the results in Web browser
 view_app/read_input-tree&gcl.html can be used for showing the results. Please use this in some web browser.
+
+## Note
+Now, for analysis genomic data is constructed using "all reference genomes" from NCBI ftp site. We can change these dataset more small or more large one. Tentatively, I set it as like this. If some one want to do different data set, please inform or just try it. 
 
 ## 📝 Reference
 This tool implements the methodology developed in:

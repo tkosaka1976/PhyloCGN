@@ -28,7 +28,7 @@ CONFIG = {
   
   # 再実行設定
   reuse: {
-    enabled: true,
+    enabled: false,
     source_run: "",
     skip_tasks: [
       :download_genomes, 
@@ -846,7 +846,7 @@ task :gene_cluster_db_analysis do
   --output #{Paths.output("conserved_gene_ids_cut.csv")}"
   
   sh "ruby scripts/tree_cluster-taxonomy_analysis.rb \
-  --genome_db shared_resources/genomes.db \
+  --genome_db #{Paths.shared("genomes.db")} \
   --tree_db #{Paths.intermediate("analysis.sqlite")} \
   --output #{Paths.output("tree_cluster_taxonomy.csv")}"
   
