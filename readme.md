@@ -7,6 +7,9 @@
 **Version 0.9.0 (Beta)**  
 > 💡 **Note:** This is a pre-release version. Final adjustments are ongoing.
 
+**⚠️ Current Limitation (v0.9.0-beta):**
+PhyloCGN currently supports a single amino acid sequence as input. This design ensures that the phylogenetic tree is correctly rooted and focused on the specific protein of interest. For multiple targets, please run them as separate tasks. Multi-sequence selection logic is planned for future updates.
+
 ## 💡 What is PhyloCGN?
 **PhyloCGN** is a bioinformatics tool designed to identify functionally related gene sets (such as **protein complexes** or **maturation factors**) by integrating two powerful evolutionary signals:
 
@@ -76,7 +79,7 @@ First run time should need a huge data for downloading genomic data from ncbi an
 ### 5. Check Results
 All results, including phylogenetic trees and conserved genomic neighborhood data, will be stored in the output folder.
 
-### 5. showing the results in Web browser
+### 5. Showing the results in Web browser
 view_app/read_input-tree&gcl.html can be used for showing the results. Please use this in some web browser.
 
 ## Note
