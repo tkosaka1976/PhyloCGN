@@ -1,0 +1,103 @@
+body { 
+  margin: 0; 
+  font-family: "Helvetica Neue", Arial, sans-serif; 
+  display: flex; 
+  height: 100vh; 
+  overflow: hidden; 
+}
+
+#sidebar {
+width: 320px;
+min-width: 320px;
+background: #f9f9f9;
+border-right: 1px solid #ccc;
+display: flex;
+flex-direction: column;
+z-index: 10;
+}
+
+#controls {
+padding: 15px;
+border-bottom: 1px solid #ddd;
+background: #fff;
+}
+
+#table-container {
+flex: 1;
+overflow: auto;
+background: #fff;
+}
+
+#viz {
+flex: 1;
+position: relative;
+background: #fff;
+overflow: hidden;
+}
+
+/* --- UIパーツ --- */
+h3 { margin: 0 0 10px 0; font-size: 14px; color: #333; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+.group { margin-bottom: 15px; }
+input[type="file"] { width: 100%; font-size: 11px; margin-bottom: 5px;}
+    
+.radio-label {
+display: block;
+margin-bottom: 4px;
+font-size: 12px;
+cursor: pointer;
+color: #444;
+}
+.radio-label input { margin-right: 6px; }
+
+/* カットオフ値表示 */
+#tree-threshold, #gcl-threshold {
+margin-top: 5px;
+font-size: 12px;
+color: #d32f2f;
+font-weight: bold;
+display: none;
+background: #ffebee;
+padding: 6px;
+border-radius: 4px;
+border: 1px solid #ffcdd2;
+}
+
+/* --- テーブル --- */
+table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; }
+th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #eee; }
+th { background: #f0f0f0; position: sticky; top: 0; font-weight: bold; }
+tr:hover { background: #e3f2fd; cursor: pointer; }
+tr.selected { background: #ffe082; border-left: 4px solid #ff9800; }
+.gcl-cell { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #666; font-family: monospace; }
+
+/* --- 系統樹スタイル --- */
+.link { fill: none; stroke: #ccc; stroke-width: 1px; transition: d 0.8s; }
+    
+.node circle { 
+stroke: #555; 
+stroke-width: 1.5px; 
+transition: fill 0.5s ease;
+cursor: pointer;
+}
+    
+.node text { 
+font-family: Consolas, monospace; 
+font-size: 11px; 
+fill: #333; 
+text-shadow: 1px 1px 0 #fff; 
+pointer-events: none;
+transition: opacity 0.3s;
+}
+
+/* ハイライト */
+.node.highlighted circle { 
+r: 7px !important; 
+fill: #ffeb3b !important; 
+stroke: #d32f2f !important; 
+stroke-width: 3px !important; 
+}
+.node.highlighted text { 
+font-weight: bold; 
+fill: #d32f2f !important; 
+font-size: 13px; 
+}

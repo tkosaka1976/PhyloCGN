@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Clustered Tree with GCL</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="sidebar">
+        <div id="controls">
+            <div class="group">
+                <h3>1. Tree (JSON)</h3>
+                <input type="file" id="inputJson" accept=".json">
+                <label class="radio-label"><input type="radio" name="layoutMode" value="aligned" checked disabled>Aligned</label>
+                <label class="radio-label"><input type="radio" name="layoutMode" value="distance" disabled>Distance</label>
+                <div id="tree-threshold">Threshold: <span id="tree-cut-val">-</span></div>
+            </div>
+
+            <div class="group">
+                <h3>2. GCL Data (CSV)</h3>
+                <input type="file" id="inputCsv" accept=".csv">
+                <div id="gcl-threshold">Threshold: <span id="gcl-cut-val">-</span></div>
+            </div>
+
+        </div>
+
+        <div id="table-container">
+            <table id="dataTable">
+                <thead>
+                    <tr><th style="width: 30%">ID</th><th style="width: 70%">Conserved GCL</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="2" style="padding:20px; text-align:center; color:#999;">Load CSV...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="viz"></div>
+<!--
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+-->
+    <script src="d3.v7.min.js"></script>
+    <script src="script.js"></script>
+    
+</body>
+</html>
