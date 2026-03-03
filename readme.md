@@ -1,8 +1,11 @@
 
 
-# PhyloCGN (Phylogenetic and Conserved Genomic Neighborhood)
+# PhyloCGN (Phylogeny and Conserved Genomic Neighborhood)
 
 ### **Discover the "Functional Partners" of Your Protein via Evolutionary Context.**
+
+**Version 0.9.0 (Beta)**  
+> 💡 **Note:** This is a pre-release version. Final adjustments are ongoing.
 
 ## 💡 What is PhyloCGN?
 **PhyloCGN** is a bioinformatics tool designed to identify functionally related gene sets (such as **protein complexes** or **maturation factors**) by integrating two powerful evolutionary signals:
@@ -80,3 +83,6 @@ Code Generation (Gemini): Many standard modules and functional components were s
 Refactoring (Claude): Final refactoring and code optimization of the Rakefile were performed using Claude 3.5 Sonnet.  
   
 Note: All AI-generated code has been thoroughly reviewed, modified, and validated by the developer to ensure scientific accuracy and reliability.
+
+## ⚖️ License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

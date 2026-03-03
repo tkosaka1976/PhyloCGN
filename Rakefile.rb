@@ -8,11 +8,13 @@ require 'yaml'
 # 設定セクション（ここを編集してパラメータ調整）
 # =============================================================================
 
+VERSION = "0.9.0"
+
 CONFIG = {
   
   # 入力ファイル
   files: {
-    query_protein: "PTH_1017_aa.fasta",
+    query_protein: "",
     accessions: "accessions.txt",
     bacteria_accessions: "bacteria_accessions.txt",
     archaea_accessions: "archaea_accessions.txt"
@@ -27,7 +29,7 @@ CONFIG = {
   # 再実行設定
   reuse: {
     enabled: true,
-    source_run: "20260302_02_dist1.0_up20_score0.8",
+    source_run: "",
     skip_tasks: [
       :download_genomes, 
       :homologs_search, 
@@ -451,7 +453,7 @@ end
 # メインタスク
 # =============================================================================
 
-desc "ゲノムデータをNCBI ftpよりダウンロード。error_list.txt に何か残っていたら、再実行すべし"
+desc "ゲノムデータをNCBI ftpよりダウンロード。error_list.txt に何か残っていたら、再実行。"
 task :download_genomes do
   Logger.step("ゲノムデータダウンロード")
   
@@ -1099,4 +1101,9 @@ task :reanalyze do
     Logger.error("再解析中にエラーが発生しました: #{e.message}")
     puts e.backtrace
   end
+end
+
+# バージョン確認タスク（任意）
+task :version do
+  puts "PhyloCGN v#{VERSION}"
 end
