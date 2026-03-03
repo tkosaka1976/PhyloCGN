@@ -46,7 +46,7 @@ cd PhyloCGN
 
 ## 🚀 Usage
 ### 1. Prepare Input
-Place your query protein sequence (FASTA format) into the input folder.
+Place your query protein sequence (FASTA format) into the "input" folder. Please make "input" folder before do that.
 ### 2. Configure Rakefile
 Open Rakefile and ensure the file name matches your input:
 
