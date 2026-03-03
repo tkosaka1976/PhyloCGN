@@ -4,8 +4,6 @@
 
 ### **Discover the "Functional Partners" of Your Protein via Evolutionary Context.**
 
----
-
 ## 💡 What is PhyloCGN?
 **PhyloCGN** is a bioinformatics tool designed to identify functionally related gene sets (such as **protein complexes** or **maturation factors**) by integrating two powerful evolutionary signals:
 
@@ -14,15 +12,11 @@
 
 Based on the analytical framework described in [JSME (2024)](https://www.jstage.jst.go.jp/article/jsme2/40/4/40_ME25018/_html/-char/en), this application automates the complex process of identifying conserved gene clusters that are likely to work together in the same biological pathway.
 
----
-
 ## 🎯 Target Audience
 If you are an experimental biologist asking these questions, **PhyloCGN** is for you:
 * *"What are the missing components of this protein complex?"*
 * *"Which genes are essential for the maturation or assembly of my protein of interest?"*
 * *"Is this gene cluster conserved across specific lineages, and what is its minimal functional unit?"*
-
----
 
 ## 🛠 Prerequisites & Installation
 
@@ -46,8 +40,6 @@ If you prefer not to use Conda, ensure the following are in your PATH:
 git clone https://github.com/your_username/PhyloCGN.git
 cd PhyloCGN
 ```
-
----
 
 ## 🚀 Usage
 ### 1. Prepare Input
@@ -74,13 +66,9 @@ _To see all available tasks, run:_ ```rake -T```
 ### 4. Check Results
 All results, including phylogenetic trees and conserved genomic neighborhood data, will be stored in the output folder.
 
----
-
 ## 📝 Reference
 This tool implements the methodology developed in:
 > Tomoyuki Kosaka and Minenosuke Matsutani, Japanese Journal of Science and Mechanical Engineering (JSME), 2024 ([https://doi.org/10.1264/jsme2.ME25018](https://doi.org/10.1264/jsme2.ME25018)).
-
----
 
 ## 🛠 Development Process & AI Collaboration
 This project leverages AI assistants (Gemini and Claude) to enhance development efficiency while maintaining rigorous human oversight.  
