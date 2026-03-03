@@ -40,14 +40,14 @@ Please consider installing these tools on your machine. In addition, these comma
  
 ### 2. Clone the Repository
 
-```
+```bash
 git clone https://github.com/your_username/PhyloCGN.git
 cd PhyloCGN
 ```
 
 ## 🚀 Usage
 ### 1. Prepare Input
-Place your query protein sequence (FASTA format) into the "input" folder. Please make the "input" folder before do that.
+Place your query protein sequence (FASTA format) into the "input" folder. Please make the "input" folder before doing that.
 ### 2. Configure Rakefile
 Open Rakefile and ensure the file name matches your input:
 
@@ -60,7 +60,7 @@ files: {
 ```
 
 ### 3. Set NCBI API key
-Set env var via ```export NCBI_API_KEY="XXX"``` in your .zshrc or directly put in the Rakefile. It is required for downloading the genomic data.
+Set env var via `export NCBI_API_KEY="XXX"` in your .zshrc or directly put in the Rakefile. It is required for downloading the genomic data.
 NCBI API KEY can be obtained from [ncbi website](https://www.ncbi.nlm.nih.gov) when you make your account.
 
 ### 4. Run Analysis
@@ -70,7 +70,7 @@ Execute the full pipeline with a single command:
 rake do_all
 ```
 
-_To see all available tasks, run:_ ```rake -T```
+_To see all available tasks, run:_ `rake -T`
 
 First run time should require a huge data for downloading genomic data from NCBI and constructing the mmseqs database for analysis.
 
