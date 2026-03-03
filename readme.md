@@ -23,7 +23,7 @@ If you are an experimental biologist asking these questions, **PhyloCGN** is for
 This tool requires the following command-line tools.
 
 ### 1. Software Dependencies
-If you prefer not to use Conda, ensure the following are in your PATH:
+Please consider to install these tools into your machine.
 
 - System: curl, unzip, ruby (sequel via gem), sqlite3 
 - Bioinformatics:
@@ -65,6 +65,9 @@ rake do_all
 _To see all available tasks, run:_ ```rake -T```
 ### 4. Check Results
 All results, including phylogenetic trees and conserved genomic neighborhood data, will be stored in the output folder.
+
+### 5. showing the results in Web browser
+view_app/read_input-tree&gcl.html can be used for showing the results. Please use this in some web browser.
 
 ## 📝 Reference
 This tool implements the methodology developed in:
