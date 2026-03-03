@@ -1,5 +1,3 @@
-
-
 # PhyloCGN (Phylogeny and Conserved Genomic Neighborhood)
 
 ### **Discover the "Functional Partners" of Your Protein via Evolutionary Context.**
