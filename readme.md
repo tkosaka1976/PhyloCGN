@@ -27,7 +27,7 @@ If you are an experimental biologist asking these questions, **PhyloCGN** is for
 This tool requires the following command-line tools.
 
 ### 1. Software Dependencies
-Please consider to install these tools into your machine. In addition, these command names should be as the listed way.
+Please consider installing these tools on your machine. In addition, these command names should be in the way.
 
 - System: curl, unzip, ruby (sequel via gem), sqlite3 
 - Bioinformatics:
@@ -47,7 +47,7 @@ cd PhyloCGN
 
 ## 🚀 Usage
 ### 1. Prepare Input
-Place your query protein sequence (FASTA format) into the "input" folder. Please make "input" folder before do that.
+Place your query protein sequence (FASTA format) into the "input" folder. Please make the "input" folder before do that.
 ### 2. Configure Rakefile
 Open Rakefile and ensure the file name matches your input:
 
@@ -61,7 +61,7 @@ files: {
 
 ### 3. Set NCBI API key
 Set env var via ```export NCBI_API_KEY="XXX"``` in your .zshrc or directly put in the Rakefile. It is required for downloading the genomic data.
-NCBI API KEY can get from [ncbi web site](https://www.ncbi.nlm.nih.gov) wen you make your account.
+NCBI API KEY can be obtained from [ncbi website](https://www.ncbi.nlm.nih.gov) when you make your account.
 
 ### 4. Run Analysis
 Execute the full pipeline with a single command:
@@ -72,20 +72,20 @@ rake do_all
 
 _To see all available tasks, run:_ ```rake -T```
 
-First run time should need a huge data for downloading genomic data from ncbi and constructing mmseqs database for analysis.
+First run time should require a huge data for downloading genomic data from NCBI and constructing the mmseqs database for analysis.
 
 ### 5. Check Results
 All results, including phylogenetic trees and conserved genomic neighborhood data, will be stored in the output folder.
 
 ### 5. Showing the results in Web browser
-view_app/read_input-tree&gcl.html can be used for showing the results. Please use this in some web browser.
+view_app/read_input-tree&gcl.html can be used for showing the results. Please use this in a web browser.
 
 ## Note
-Now, for analysis genomic data is constructed using "all reference genomes" from NCBI ftp site. We can change these dataset more small or more large one. Tentatively, I set it as like this. If some one want to do different data set, please inform or just try it. 
+Now, for analysis, genomic data is constructed using "all reference genomes" from the NCBI ftp site. We can change these datasets more a smaller or larger one. Tentatively, I set it like this. If someone wants to do a different dataset, please inform us, or just try it. 
 
 ## 📝 Reference
 This tool implements the methodology developed in:
-> Tomoyuki Kosaka and Minenosuke Matsutani, Japanese Journal of Science and Mechanical Engineering (JSME), 2024 ([https://doi.org/10.1264/jsme2.ME25018](https://doi.org/10.1264/jsme2.ME25018)).
+> Tomoyuki Kosaka and Minenosuke Matsutani, Microbes & Environments, 2025 ([https://doi.org/10.1264/jsme2.ME25018](https://doi.org/10.1264/jsme2.ME25018)).
 
 ## 🛠 Development Process & AI Collaboration
 This project leverages AI assistants (Gemini and Claude) to enhance development efficiency while maintaining rigorous human oversight.  
