@@ -75,7 +75,7 @@ CONFIG = {
       spr: 4,
       threads: 2
     },
-    muscle_version: "5.3",
+    muscle_version: "5",
     muscle: {
       super5_threshold: 1000
     }
