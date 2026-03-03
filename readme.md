@@ -14,7 +14,7 @@ PhyloCGN currently supports a single amino acid sequence as input. This design e
 1.  **Phylogeny:** How genes have co-evolved across different species.
 2.  **Genomic Neighborhood:** How genes are physically clustered on the genome.
 
-Based on the analytical framework described in [JSME (2024)](https://www.jstage.jst.go.jp/article/jsme2/40/4/40_ME25018/_html/-char/en), this application automates the complex process of identifying conserved gene clusters that are likely to work together in the same biological pathway.
+Based on the analytical framework described in [Kosaka and Matxutani (2025) Microbes & Environments](https://www.jstage.jst.go.jp/article/jsme2/40/4/40_ME25018/_html/-char/en), this application automates the complex process of identifying conserved gene clusters that are likely to work together in the same biological pathway.
 
 ## 🎯 Target Audience
 If you are an experimental biologist asking these questions, **PhyloCGN** is for you:
