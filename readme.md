@@ -27,7 +27,7 @@ If you are an experimental biologist asking these questions, **PhyloCGN** is for
 This tool requires the following command-line tools.
 
 ### 1. Software Dependencies
-Please consider installing these tools on your machine. In addition, these command names should be in the way.
+Please install these tools on your machine. In addition, these command names should be in the way.
 
 - System: curl, unzip, ruby (sequel via gem), sqlite3 
 - Bioinformatics:
