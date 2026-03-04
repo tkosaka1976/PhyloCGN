@@ -85,7 +85,7 @@ Now, for analysis, genomic data is constructed using "all reference genomes" fro
 
 ## 📝 Reference
 This tool implements the methodology developed in:
-> Tomoyuki Kosaka and Minenosuke Matsutani, Microbes & Environments, 2025 ([https://doi.org/10.1264/jsme2.ME25018](https://doi.org/10.1264/jsme2.ME25018)).
+> Tomoyuki Kosaka and Minenosuke Matsutani, Microbes & Environments, 2025, 40: ME25018 ([https://doi.org/10.1264/jsme2.ME25018](https://doi.org/10.1264/jsme2.ME25018)).
 
 ## 🛠 Development Process & AI Collaboration
 This project leverages AI assistants (Gemini and Claude) to enhance development efficiency while maintaining rigorous human oversight.  
