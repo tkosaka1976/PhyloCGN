@@ -41,7 +41,7 @@ Please install these tools on your machine. In addition, these command names sho
 ### 2. Clone the Repository
 
 ```bash
-git clone https://github.com/your_username/PhyloCGN.git
+git clone https://github.com/tkosaka1976/PhyloCGN.git
 cd PhyloCGN
 ```
 
