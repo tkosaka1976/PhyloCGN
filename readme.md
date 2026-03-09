@@ -24,9 +24,11 @@ If you are an experimental biologist asking these questions, **PhyloCGN** is for
 
 ## 🛠 Prerequisites & Installation
 
-This tool requires the following command-line tools.
+### 0. Storage requirement 
+For genomic data download and database construction, at least **60 GB** of data storage is required. (Because now downloading genomic data is all about reference genomes of NCBI)
 
 ### 1. Software Dependencies
+This tool requires the following command-line tools.  
 Please install these tools on your machine. In addition, these command names should be in the way.
 
 - System: curl, unzip, ruby (sequel via gem), sqlite3 
@@ -76,6 +78,13 @@ First run time should require a huge data for downloading genomic data from NCBI
 
 ### 5. Check Results
 All results, including phylogenetic trees and conserved genomic neighborhood data, will be stored in the output folder.
+
+_Results files_
+- **diamond_hits_cut_trim.json**: JSON file showing query homologs analyzed data (Please use in view_app) 
+- **conserved_gene_ids_cut.csv**: CSV file showing GCL of the tree clades (Please use in view_app)
+- **diamond_hits_cut_trim.tree**: Newick file of diamond_hits_cut_trim.json already trimmed by the clusterd clade
+- **tree_cluster_taxonomy.csv**: tree clade taxonomy of class level
+- **cluster_representative_functions.csv**: functions of representative protein in cluster ID are shown in GCL
 
 ### 5. Showing the results in Web browser
 view_app/read_input-tree&gcl.html can be used for showing the results. Please use this in a web browser.
