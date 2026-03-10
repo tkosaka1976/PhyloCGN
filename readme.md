@@ -92,9 +92,14 @@ view_app/read_input-tree&gcl.html can be used for showing the results. Please us
 ## Note
 Now, for analysis, genomic data is constructed using "all reference genomes" from the NCBI ftp site. We can change these datasets more a smaller or larger one. Tentatively, I set it like this. If someone wants to do a different dataset, please inform us, or just try it. 
 
-## 📝 Reference
-This tool implements the methodology developed in:
-> Tomoyuki Kosaka and Minenosuke Matsutani, Microbes & Environments, 2025, 40: ME25018 ([https://doi.org/10.1264/jsme2.ME25018](https://doi.org/10.1264/jsme2.ME25018)).
+## 📝 Citation & Reference
+
+If you use PhyloCGN in your research, please cite the following paper:
+
+**Tomoyuki Kosaka and Minenosuke Matsutani**, "Using Phylogeny and a Conserved Genomic Neighborhood Analysis to Extract and Visualize Gene Sets Involved in Target Gene Function: The Case of [NiFe]-hydrogenase and Succinate Dehydrogenase." _Microbes and Environments_, 2025, 40: ME25018.  
+[https://doi.org/10.1264/jsme2.ME25018](https://doi.org/10.1264/jsme2.ME25018)
+
+This tool implements the core methodology described in the above study with an original integration of modern bioinformatics pipelines.  
 
 ## 🛠 Development Process & AI Collaboration
 This project leverages AI assistants (Gemini and Claude) to enhance development efficiency while maintaining rigorous human oversight.  
