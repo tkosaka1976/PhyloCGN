@@ -11,7 +11,7 @@ PhyloCGN currently supports a single amino acid sequence as input. This design e
 ## 💡 What is PhyloCGN?
 **PhyloCGN** is a bioinformatics tool designed to identify functionally related gene sets (such as **protein complexes** or **maturation factors**) by integrating two powerful evolutionary signals:
 
-1.  **Phylogeny:** How genes have co-evolved across different species.
+1.  **Phylogeny:** The evolutionary trajectory of protein structure and function.
 2.  **Genomic Neighborhood:** How genes are physically clustered on the genome.
 
 Based on the analytical framework described in [Kosaka and Matsutani (2025) Microbes & Environments](https://www.jstage.jst.go.jp/article/jsme2/40/4/40_ME25018/_html/-char/en), this application automates the complex process of identifying conserved gene clusters that are likely to work together in the same biological pathway.
