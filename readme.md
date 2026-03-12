@@ -86,7 +86,7 @@ _Results files_
 - **tree_cluster_taxonomy.csv**: tree clade taxonomy of class level
 - **cluster_representative_functions.csv**: functions of representative protein in cluster ID are shown in GCL
 
-### 5. Showing the results in Web browser
+### 6. Showing the results in Web browser
 view_app/read_input-tree&gcl.html can be used for showing the results. Please use this in a web browser.
 
 ## Note
