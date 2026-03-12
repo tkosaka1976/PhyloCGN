@@ -74,7 +74,23 @@ rake do_all
 
 _To see all available tasks, run:_ `rake -T`
 
-First run time should require a huge data for downloading genomic data from NCBI and constructing the mmseqs database for analysis.
+- rake clean                          # Remove any temporary products
+- rake cleanup_all_intermediate       # 全実行の中間ファイルを一括削除
+- rake cleanup_intermediate           # 中間ファイルを削除してディスク容量を節約 [run_dir=DIR_NAM...
+- rake clobber                        # Remove any generated files
+- rake clustering_genomic_neiborhood  # genomic neiborhood のクラスター構築
+- rake do_all                         # 全解析パイプラインを実行
+- rake download_genomes               # ゲノムデータをNCBI ftpよりダウンロード。error_list.tx...
+- rake gathering_genomic_neiborhood   # 近傍遺伝子を集める
+- rake homologs_search                # queryのホモログをgenome dbよりdiamondで探す
+- rake init                           # ディレクトリ構造を初期化
+- rake list_runs                      # 過去の実行結果を一覧表示
+- rake make_tree                      # MSAからのTree作成
+- rake reanalyze                      # 最新(latest)の結果を使い、閾値を変更して再計算する
+- rake show_run_params                # 特定の実行結果のパラメータを表示 [run_dir=DIR_NAME]
+- rake tree_analysis                  # 系統樹の閾値調整 (使用法: rake tree_analysis [DI...
+
+The first run time should require a huge amount of data for downloading genomic data from NCBI and constructing the mmseqs database for analysis.
 
 ### 5. Check Results
 All results, including phylogenetic trees and conserved genomic neighborhood data, will be stored in the output folder.
@@ -88,6 +104,15 @@ _Results files_
 
 ### 6. Showing the results in Web browser
 view_app/read_input-tree&gcl.html can be used for showing the results. Please use this in a web browser.
+
+## Recommended analysis steps
+1. rake do_all
+2. rake tree_analysis [latest_output_runs_DIR_name]
+3. Change the value of tree_distance_threshold: in Rakefile.rb based on the results of tree_analysis
+or directly change the env value from the command line.
+4. rake reanalyze
+(reanalyze only on the latest results; therefore, tree_analysis should be done for the latest data)
+
 
 ## Note
 Now, for analysis, genomic data is constructed using "all reference genomes" from the NCBI ftp site. We can change these datasets more a smaller or larger one. Tentatively, I set it like this. If someone wants to do a different dataset, please inform us, or just try it. 
