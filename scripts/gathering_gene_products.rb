@@ -2,7 +2,7 @@ require 'csv'
 require 'optparse'
 
 
-params = ARGV.getopts("","input:","output:")
+params = ARGV.getopts("","input:","output:","downloads_d:")
 
 in_fn = params["input"]
 # Representative_ID	Cluster_Size	gene_cluster_id
@@ -19,7 +19,7 @@ out_f.puts %w(cluster_id protein_accession product).to_csv
 ids.compact!
 
 ids.each_with_index do |(gene,genome),i|
-  gff_path = "./downloads/ncbi_dataset/data/#{genome}/genomic.gff"
+  gff_path = File.join(params["downloads_d"],"ncbi_dataset","data",genome,"genomic.gff")
   File.foreach(gff_path) do |line|
     next if line.start_with?("#")
     if line.include? gene

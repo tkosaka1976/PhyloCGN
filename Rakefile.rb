@@ -8,7 +8,6 @@ require 'yaml'
 # 設定セクション（ここを編集してパラメータ調整）
 # =============================================================================
 
-VERSION = "0.9.0"
 
 CONFIG = {
   
@@ -20,11 +19,19 @@ CONFIG = {
     archaea_accessions: "archaea_accessions.txt"
   },
   
+  # ディレクトリ構成
+  dirs: {
+    input: "input",
+    output: "output",
+    downloads: "downloads",
+    shared_resources: "shared_resources"
+  },
+  
   # クラスタリングとゲノム近傍解析のパラメータ
   # ★変更点: ENV['XXX'] があればそれを優先
-  tree_distance_threshold: ENV['DIST'] ? ENV['DIST'].to_f : 5.0,
+  tree_distance_threshold: ENV['DIST'] ? ENV['DIST'].to_f : 2.0,
   neighborhood_updown_size: ENV['UPDOWN'] ? ENV['UPDOWN'].to_f : 10,
-  neighborhood_conservation_score: ENV['SCORE'] ? ENV['SCORE'].to_f : 0.8,
+  neighborhood_conservation_score: ENV['SCORE'] ? ENV['SCORE'].to_f : 0.9,
   
   # 再実行設定
   reuse: {
@@ -36,10 +43,10 @@ CONFIG = {
       
       :make_tree,
       #:tree_clustering,
-      
+      #
       #:gathering_genomic_neiborhood,
       #:clustering_genomic_neiborhood,
-      
+      #
       #:make_gene_cluster_db,
       #:gene_cluster_db_analysis,
     ]
@@ -86,21 +93,13 @@ CONFIG = {
   # API設定
   ncbi_api_key: ENV['NCBI_API_KEY'],
   
-  # ディレクトリ構成
-  dirs: {
-    input: "input",
-    output: "output",
-    downloads: "downloads",
-    shared_resources: "shared_resources"
-  },
-  
   # ファイル管理設定
   file_management: {
     keep_intermediate: true,
     cleanup_temp_on_success: true
   },
   
-}.freeze
+}#.freeze
 
 raise "NCBI_API_KEY is not set" unless CONFIG[:ncbi_api_key]
 
@@ -167,37 +166,20 @@ module RunManager
     end
     
     def create_run_directory
-      # 1. 基本となる日付 (YYYYMMDD)
       date_str = Time.now.strftime("%Y%m%d")
-      
-      # 2. 重要パラメータをディレクトリ名に含める
-      params_str = [
-        "dist#{CONFIG[:tree_distance_threshold]}",
-        "up#{CONFIG[:neighborhood_updown_size]}",
-        "score#{CONFIG[:neighborhood_conservation_score]}"
-      ].join("_")
-      
-      # 3. 出力先ベースディレクトリ
+
       runs_base = File.join(CONFIG[:dirs][:output], "runs")
       FileUtils.mkdir_p(runs_base) unless Dir.exist?(runs_base)
-      
-      # 4. ディレクトリ名の決定ロジック
-      #    最初から連番(_01)を付けて空きを探す
-      counter = 1
-      run_dir = nil
-      dir_name = nil
 
+      counter = 1
+      dir_name = nil
+      run_dir = nil
       loop do
-        # 2桁の連番を作成 (例: _01, _02)
-        suffix = sprintf("_%02d", counter)
-        
-        # 名前: YYYYMMDD_01_dist...
-        dir_name = "#{date_str}#{suffix}_#{params_str}"
-        run_dir = File.join(runs_base, dir_name)
-        
-        # 存在しなければ決定、存在すればカウントアップ
-        break unless Dir.exist?(run_dir)
-        counter += 1
+          suffix = sprintf("_%03d", counter)
+          dir_name = "#{date_str}#{suffix}"  # ← シンプルに
+          run_dir = File.join(runs_base, dir_name)
+          break unless Dir.exist?(run_dir)
+          counter += 1
       end
       
       # ディレクトリ作成
@@ -814,7 +796,8 @@ task :clustering_genomic_neiborhood do
 
   sh "ruby scripts/gathering_gene_products.rb \
   --input #{Paths.output("cluster_stat_cluster_id.csv")} \
-  --output #{Paths.output("cluster_representative_functions.csv")}"  
+  --output #{Paths.output("cluster_representative_functions.csv")} \
+  --downloads_d #{CONFIG[:dirs][:downloads]}"  
   
   Logger.success("クラスタリング完了")
 end
@@ -999,7 +982,7 @@ end
 desc "ディレクトリ構造を初期化"
 task :init do
   CONFIG[:dirs].each do |name, path|
-    Dir.mkdir(path) unless Dir.exist?(path)
+    FileUtils.mkdir_p(path)   # ← 親ディレクトリも含めて作成
     puts "✅ #{path}/"
   end
   
@@ -1074,9 +1057,10 @@ task :reanalyze do
   #    invokeを使うと依存関係も解決されますが、ここでは明示的な順序で実行します。
 
   begin
-    # (1) まず分布を確認（オプション）
-    puts "\n--- [Step 1] 系統樹の距離分布を確認 ---"
-    Rake::Task[:tree_analysis].invoke
+    
+    RunManager.save_run_params(RunManager.current_run_dir)
+    #puts "\n--- [Step 1] 系統樹の距離分布を確認 ---"
+    #Rake::Task[:tree_analysis].invoke
 
     # (2) クラスタリング再実行 (パラメータ DIST が影響)
     puts "\n--- [Step 2] クラスタリング実行 (Threshold: #{CONFIG[:tree_distance_threshold]}) ---"
