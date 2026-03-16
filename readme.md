@@ -25,7 +25,7 @@ If you are an experimental biologist asking these questions, **PhyloCGN** is for
 ## 🛠 Prerequisites & Installation
 
 ### 0. Storage requirement 
-For genomic data download and database construction, at least **60 GB** of data storage is required. (Because now downloading genomic data is all about reference genomes of NCBI)
+For genomic data download and database construction, at least **60 GB** of data storage is required. (Because now downloading genomic data is all reference genomes from NCBI ftp server)
 
 ### 1. Software Dependencies
 This tool requires the following command-line tools.  
