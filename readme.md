@@ -5,7 +5,7 @@
 **Version 0.9.1 (Beta)**  
 > 💡 **Note:** This is a pre-release version. Final adjustments are ongoing.
 
-**⚠️ Current Limitation (v0.9.0-beta):**
+**⚠️ Current Limitation (v0.9.1-beta):**
 PhyloCGN currently supports a single amino acid sequence as input. This design ensures that the phylogenetic tree is correctly rooted and focused on the specific protein of interest. For multiple targets, please run them as separate tasks. Multi-sequence selection logic is planned for future updates.
 
 ## 💡 What is PhyloCGN?
