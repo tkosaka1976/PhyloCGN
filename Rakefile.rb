@@ -253,7 +253,7 @@ module RunManager
         
         f.puts "【クラスタリング】"
         f.puts "  系統樹距離閾値: #{CONFIG[:tree_distance_threshold]}"
-        f.puts "  MMseqs2 evalue: #{CONFIG[:mmseqs][:evalue]}"
+        f.puts "  MMseqs2 identity: #{CONFIG[:mmseqs][:identity]}"
         f.puts "  MMseqs2 Coverage: #{CONFIG[:mmseqs][:coverage]}"
         f.puts ""
         
