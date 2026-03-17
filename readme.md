@@ -31,7 +31,7 @@ For genomic data download and database construction, at least **60 GB** of data 
 This tool requires the following command-line tools.  
 Please install these tools on your machine. In addition, these command names should be in the way.
 
-- System: curl, unzip, ruby (sequel via gem), sqlite3 
+- System: curl, unzip, ruby (rake and sequel via gem), sqlite3 
 - Bioinformatics:
   - datasets (NCBI Command Line Tool)
   - diamond (Sequence Aligner)
