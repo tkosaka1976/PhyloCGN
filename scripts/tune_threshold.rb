@@ -76,7 +76,7 @@ class ThresholdTuner
       curr *= 1.8 # 倍々で増やしていく
     end
     # きりのいい数字を追加
-    steps += [0.001, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
+    steps += [0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
     steps = steps.uniq.sort.select { |v| v > 0 }
 
     steps.each do |th|

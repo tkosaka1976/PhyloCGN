@@ -18,7 +18,7 @@ DB[:diamond_clusters].each do |recode|
 end
 
 out_f = File.open(output_fn,"w")
-out_f.puts %w(GCL_id GCL).to_csv
+out_f.puts %w(Clade_id GCL).to_csv
 
 id2genomes.each do |id, genomes|
   data = DB[:cluster_results].where(genome_id: genomes).select_map(:gene_cluster_id)

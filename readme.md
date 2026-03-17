@@ -2,10 +2,10 @@
 
 ### **Discover the "Functional Partners" of Your Protein via Evolutionary Context.**
 
-**Version 0.9.0 (Beta)**  
+**Version 0.9.2 (Beta)**  
 > 💡 **Note:** This is a pre-release version. Final adjustments are ongoing.
 
-**⚠️ Current Limitation (v0.9.0-beta):**
+**⚠️ Current Limitation (v0.9.2-beta):**
 PhyloCGN currently supports a single amino acid sequence as input. This design ensures that the phylogenetic tree is correctly rooted and focused on the specific protein of interest. For multiple targets, please run them as separate tasks. Multi-sequence selection logic is planned for future updates.
 
 ## 💡 What is PhyloCGN?
@@ -54,11 +54,16 @@ Place your query protein sequence (FASTA format) into the "input" folder. Please
 Open Rakefile and ensure the file name matches your input:
 
 ```ruby
- # Edit this section in Rakefile
+ # Edit this section in rakelib/config.rb
 files: {
   query_protein: "your_protein_file.fasta"
   # Must match the file in /input
-}
+},
+params_default: {
+    updown: 10,
+    dist:   2.0,
+    score:  0.9,
+  },
 ```
 
 ### 3. Set NCBI API key
@@ -69,26 +74,30 @@ NCBI API KEY can be obtained from [ncbi website](https://www.ncbi.nlm.nih.gov) w
 Execute the full pipeline with a single command:
 
 ```bash
-rake do_all
+rake do_all UPDOWN=XX DIST=XX SCORE=XX
 ```
 
 _To see all available tasks, run:_ `rake -T`
 
-- rake clean                          # Remove any temporary products
-- rake cleanup_all_intermediate       # 全実行の中間ファイルを一括削除
-- rake cleanup_intermediate           # 中間ファイルを削除してディスク容量を節約 [run_dir=DIR_NAM...
-- rake clobber                        # Remove any generated files
-- rake clustering_genomic_neiborhood  # genomic neiborhood のクラスター構築
-- rake do_all                         # 全解析パイプラインを実行
-- rake download_genomes               # ゲノムデータをNCBI ftpよりダウンロード。error_list.tx...
-- rake gathering_genomic_neiborhood   # 近傍遺伝子を集める
-- rake homologs_search                # queryのホモログをgenome dbよりdiamondで探す
-- rake init                           # ディレクトリ構造を初期化
-- rake list_runs                      # 過去の実行結果を一覧表示
-- rake make_tree                      # MSAからのTree作成
-- rake reanalyze                      # 最新(latest)の結果を使い、閾値を変更して再計算する
-- rake show_run_params                # 特定の実行結果のパラメータを表示 [run_dir=DIR_NAME]
-- rake tree_analysis                  # 系統樹の閾値調整 (使用法: rake tree_analysis [DI...
+- rake analyze_pcgn                       # 【Phase 3】 系統樹クラスタリング→保存遺伝子解析→結果出力
+- rake clean                             # Remove any temporary products
+- rake clobber                           # Remove any generated files
+- rake clustering_genomic_neiborhood     # genomic neighborhood のクラスター構築
+- rake do_all                            # 全Phase[1,2,3]を一括実行（新runフォルダを作成）
+- rake download_genomes                  # ゲノムデータをNCBI ftpよりダウンロード
+- rake gathering_genomic_neiborhood      # 近傍遺伝子を集める
+- rake homologs_search                   # queryのホモログをgenome dbよりdiamondで探す
+- rake make_gene_cluster_db              # 遺伝子クラスターDBを構築
+- rake make_tree                         # MSAからのTree作成
+- rake neighborhood                      # 【Phase 2】 近傍遺伝子収集→クラスタリング
+- rake prepare_tree                      # 【Phase 1】 prepare_tree: ゲノムDL→ホモログ検索→系統樹作成
+- rake tree_analysis                     # [Do This
+- rake utility:cleanup_all_intermediate  # 全実行の中間ファイルを一括削除
+- rake utility:cleanup_intermediate      # 中間ファイルを削除してディスク容量を節約
+- rake utility:init                      # ディレクトリ構造を初期化
+- rake utility:list_runs                 # 過去の実行結果を一覧表示
+- rake utility:show_run_params           # 特定の実行結果のパラメータを表示
+- rake utility:version                   # PhyloCGN バージョン確認
 
 The first run time should require a huge amount of data for downloading genomic data from NCBI and constructing the mmseqs database for analysis.
 
@@ -106,13 +115,11 @@ _Results files_
 view_app/read_input-tree&gcl.html can be used for showing the results. Please use this in a web browser.
 
 ## Recommended analysis steps
-1. rake do_all
+1. rake prepare_tree
 2. rake tree_analysis [latest_output_runs_DIR_name]
-3. Change the value of tree_distance_threshold: in Rakefile.rb based on the results of tree_analysis
-or directly change the env value from the command line.
-4. rake reanalyze
-(reanalyze only on the latest results; therefore, tree_analysis should be done for the latest data)
-
+3. rake neighborhood UPDOWN=XX
+4. rake analyze_pcgn DIST=XX SCORE=XX
+5. (rake neighborhood and rake analyze_pcgn can use BASE=DIR_name for new run.)
 
 ## Note
 Now, for analysis, genomic data is constructed using "all reference genomes" from the NCBI ftp site. We can change these datasets more a smaller or larger one. Tentatively, I set it like this. If someone wants to do a different dataset, please inform us, or just try it. 

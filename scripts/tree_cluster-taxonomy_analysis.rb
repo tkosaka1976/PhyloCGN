@@ -21,7 +21,7 @@ analysis_results = db[:diamond_clusters]
 .select(:cluster_id, :class)
 .to_hash_groups(:cluster_id, :class)
 
-out_f.puts %w(GCL_id class).to_csv#(col_sep:"\t")
+out_f.puts %w(Clade_id class).to_csv#(col_sep:"\t")
 analysis_results.each do |cluster, data|
   size = 
   contents = data.compact.tally.inject([]) do |cont, (key, count)|

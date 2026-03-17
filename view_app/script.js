@@ -108,7 +108,7 @@ function loadCsv(e) {
 // --- データ注入処理 ---
 function injectData(rows) {
   rows.forEach(row => {
-    const cid = row.GCL_id;
+    const cid = row.Clade_id;
     const members = (row.GCL || "").split("|");
             
     members.forEach(m => {
@@ -291,7 +291,7 @@ function renderTable(data) {
         });
 
     // 5. 列の中身を作成
-    rows.append("td").style("font-weight", "bold").text(d => d.GCL_id);
+    rows.append("td").style("font-weight", "bold").text(d => d.Clade_id);
     rows.append("td").html(d => `<div class="gcl-cell" title="${d.GCL}">${d.GCL}</div>`);
 }
 
