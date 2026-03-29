@@ -2,11 +2,12 @@
 
 ### **Discover the "Functional Partners" of Your Protein via Evolutionary Context.**
 
-**Version 0.9.2 (Beta)**  
+**Version 0.9.3 (Beta)**  
 > 💡 **Note:** This is a pre-release version. Final adjustments are ongoing.
 
-**⚠️ Current Limitation (v0.9.2-beta):**
-PhyloCGN currently supports a single amino acid sequence as input. This design ensures that the phylogenetic tree is correctly rooted and focused on the specific protein of interest. For multiple targets, please run them as separate tasks. Multi-sequence selection logic is planned for future updates.
+**✅ Update (v0.9.3):**
+PhyloCGN now supports both single and multi-query modes for homolog search.
+See **Section 2** for configuration details.
 
 ## 💡 What is PhyloCGN?
 **PhyloCGN** is a bioinformatics tool designed to identify functionally related gene sets (such as **protein complexes** or **maturation factors**) by integrating two powerful evolutionary signals:
@@ -66,6 +67,24 @@ params_default: {
   },
 ```
 
+#### Query Mode: single vs. multi
+**Single mode** (`rake prepare_tree_single`): Uses a single query protein sequence.
+```ruby
+files: {
+  query_protein: "your_protein_file.fasta",  # used in single mode
+}
+```
+
+**Multi mode** (`rake prepare_tree_multi`): Searches with multiple query sequences in a mfasta file in parallel, then merges all hits into a unified homolog list.
+```ruby
+files: {
+  multi_query_mfasta: "your_queries.mfasta",  # used in multi mode
+  multi_primary_query_position: 1,            # 0-based index; which sequence in the mfasta
+                                              # to use as the primary query for tree construction
+}
+```
+> To check the order of sequences in your mfasta: `seqkit seq -n your_queries.mfasta`
+
 ### 3. Set NCBI API key
 Set env var via `export NCBI_API_KEY="XXX"` in your .zshrc or directly put in the Rakefile. It is required for downloading the genomic data.
 NCBI API KEY can be obtained from [ncbi website](https://www.ncbi.nlm.nih.gov) when you make your account.
@@ -79,25 +98,28 @@ rake do_all UPDOWN=XX DIST=XX SCORE=XX
 
 _To see all available tasks, run:_ `rake -T`
 
-- rake analyze_pcgn                       # 【Phase 3】 系統樹クラスタリング→保存遺伝子解析→結果出力
-- rake clean                             # Remove any temporary products
-- rake clobber                           # Remove any generated files
-- rake clustering_genomic_neiborhood     # genomic neighborhood のクラスター構築
-- rake do_all                            # 全Phase[1,2,3]を一括実行（新runフォルダを作成）
-- rake download_genomes                  # ゲノムデータをNCBI ftpよりダウンロード
-- rake gathering_genomic_neiborhood      # 近傍遺伝子を集める
-- rake homologs_search                   # queryのホモログをgenome dbよりdiamondで探す
-- rake make_gene_cluster_db              # 遺伝子クラスターDBを構築
-- rake make_tree                         # MSAからのTree作成
-- rake neighborhood                      # 【Phase 2】 近傍遺伝子収集→クラスタリング
-- rake prepare_tree                      # 【Phase 1】 prepare_tree: ゲノムDL→ホモログ検索→系統樹作成
-- rake tree_analysis                     # [Do This
-- rake utility:cleanup_all_intermediate  # 全実行の中間ファイルを一括削除
-- rake utility:cleanup_intermediate      # 中間ファイルを削除してディスク容量を節約
-- rake utility:init                      # ディレクトリ構造を初期化
-- rake utility:list_runs                 # 過去の実行結果を一覧表示
-- rake utility:show_run_params           # 特定の実行結果のパラメータを表示
-- rake utility:version                   # PhyloCGN バージョン確認
+- rake analyze_pcgn                             # 【Phase 3】 系統樹クラスタリング→保存遺伝子解...
+- rake clean                                    # Remove any temporary products
+- rake clobber                                  # Remove any generated files
+- rake clustering_genomic_neiborhood            # genomic neighborhood のクラスター構築
+- rake create_accession_list_reference_genomes  # AccessionリストをNCBI FTPより取得・生成
+- rake do_all                                   # 全Phase[1,2,3]を一括実行（新runフォルダ...
+- rake download_genomes                         # ゲノムデータをNCBI ftpよりダウンロード
+- rake gathering_genomic_neiborhood             # 近傍遺伝子を集める
+- rake homologs_search_multi                    # 【multi mode】mfastaの各配列をThre...
+- rake homologs_search_single                   # 【single mode】単一queryタンパク質でD...
+- rake make_gene_cluster_db                     # 遺伝子クラスターDBを構築
+- rake make_tree                                # MSAからのTree作成
+- rake neighborhood                             # 【Phase 2】 近傍遺伝子収集→クラスタリング
+- rake prepare_tree_multi                       # 【Phase 1 / multi】 prepare_t...
+- rake prepare_tree_single                      # 【Phase 1 / single】 prepare_...
+- rake tree_analysis                            # [Do This]
+- rake utility:cleanup_all_intermediate         # 全実行の中間ファイルを一括削除
+- rake utility:cleanup_intermediate             # 中間ファイルを削除してディスク容量を節約
+- rake utility:init                             # ディレクトリ構造を初期化
+- rake utility:list_runs                        # 過去の実行結果を一覧表示
+- rake utility:show_run_params                  # 特定の実行結果のパラメータを表示
+- rake utility:version                          # PhyloCGN バージョン確認
 
 The first run time should require a huge amount of data for downloading genomic data from NCBI and constructing the mmseqs database for analysis.
 
@@ -115,8 +137,8 @@ _Results files_
 view_app/read_input-tree&gcl.html can be used for showing the results. Please use this in a web browser.
 
 ## Recommended analysis steps
-1. rake prepare_tree
-2. rake tree_analysis [latest_output_runs_DIR_name]
+1. `rake prepare_tree_single` or `rake prepare_tree_multi`
+2. `rake tree_analysis [latest_output_runs_DIR_name]`
 3. rake neighborhood UPDOWN=XX
 4. rake analyze_pcgn DIST=XX SCORE=XX
 5. (rake neighborhood and rake analyze_pcgn can use BASE=DIR_name for new run.)

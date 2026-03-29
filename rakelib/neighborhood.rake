@@ -59,11 +59,11 @@ task :gathering_genomic_neiborhood do
 
   sh "ruby scripts/get_neighbors_csv.rb \
   --updown #{updown} \
-  --input #{Paths.output('query_homolog_list.txt')} \
+  --input #{Paths.output('all_query_homolog_list.txt')} \
   --data_d #{Paths.downloads('ncbi_dataset', 'data')} \
   --output #{Paths.output('neighborhoods_metadata.csv')}"
 
-  sh "ruby scripts/CSV-save_target_col.rb \
+  sh "ruby scripts/CSV-save_target_col_uniq.rb \
   #{Paths.output('neighborhoods_metadata.csv')} \
   Combined_ID \
   #{Paths.intermediate('neighborhoods_list.txt')}"

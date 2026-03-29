@@ -1,26 +1,48 @@
 # =============================================================================
-# Phase 1: prepare_tree
-# ゲノムDL → ホモログ検索 → MSA → 系統樹作成
-# 必ず新しいrunフォルダを作成する
+# Phase 1: prepare_tree_single
+# ゲノムDL → ホモログ検索（単一query） → MSA → 系統樹作成
 # =============================================================================
 
-desc " 【Phase 1】 prepare_tree: ゲノムDL→ホモログ検索→系統樹作成"
-task :prepare_tree do
+desc "【Phase 1 / single】 prepare_tree_single: 単一queryでゲノムDL→ホモログ検索→系統樹作成"
+task :prepare_tree_single do
   begin
     RunManager.create_new_run!
-    Logger.step("Phase 1: prepare_tree 開始")
+    Logger.step("Phase 1 (single): prepare_tree_single 開始")
     Logger.info("出力ディレクトリ: #{RunManager.current_run_dir}")
-
+    Rake::Task[:create_accession_list_reference_genomes].invoke unless File.exist?(CONFIG[:files][:accessions])
     Rake::Task[:download_genomes].invoke
-    Rake::Task[:homologs_search].invoke
+    Rake::Task[:homologs_search_single].invoke
     Rake::Task[:make_tree].invoke
-
-    RunManager.save_run_params(phase: "prepare_tree")
-    Logger.step("✅ Phase 1 完了 → 次は rake tree_analysis で閾値を確認してください")
-
+    RunManager.save_run_params(phase: "prepare_tree_single")
+    Logger.step("✅ Phase 1 (single) 完了 → 次は rake tree_analysis で閾値を確認してください")
   rescue => e
     RunManager.mark_failed(e.message)
-    Logger.error("Phase 1 失敗: #{e.message}")
+    Logger.error("Phase 1 (single) 失敗: #{e.message}")
+    Logger.error(e.backtrace.first)
+    raise
+  end
+end
+
+# =============================================================================
+# Phase 1: prepare_tree_multi
+# ゲノムDL → ホモログ検索（mfasta複数query） → MSA → 系統樹作成
+# =============================================================================
+
+desc "【Phase 1 / multi】 prepare_tree_multi: mfasta複数queryでゲノムDL→ホモログ検索→系統樹作成"
+task :prepare_tree_multi do
+  begin
+    RunManager.create_new_run!
+    Logger.step("Phase 1 (multi): prepare_tree_multi 開始")
+    Logger.info("出力ディレクトリ: #{RunManager.current_run_dir}")
+    Rake::Task[:create_accession_list_reference_genomes].invoke unless File.exist?(CONFIG[:files][:accessions])
+    Rake::Task[:download_genomes].invoke
+    Rake::Task[:homologs_search_multi].invoke
+    Rake::Task[:make_tree].invoke
+    RunManager.save_run_params(phase: "prepare_tree_multi")
+    Logger.step("✅ Phase 1 (multi) 完了 → 次は rake tree_analysis で閾値を確認してください")
+  rescue => e
+    RunManager.mark_failed(e.message)
+    Logger.error("Phase 1 (multi) 失敗: #{e.message}")
     Logger.error(e.backtrace.first)
     raise
   end
@@ -30,10 +52,9 @@ end
 # サブタスク
 # -----------------------------------------------------------------------------
 
-desc "ゲノムデータをNCBI ftpよりダウンロード"
-task :download_genomes do
-  Logger.step("ゲノムデータダウンロード")
-
+desc "AccessionリストをNCBI FTPより取得・生成"
+task :create_accession_list_reference_genomes do
+  Logger.step("Accessionリスト作成")
   puts "Fetching list from FTP..."
 
   unless File.exist?(CONFIG[:files][:bacteria_accessions])
@@ -50,20 +71,31 @@ task :download_genomes do
 
   accessions_file = CONFIG[:files][:accessions]
   unless File.exist?(accessions_file)
-    File.open(accessions_file, "w") { |it| it.write File.read(CONFIG[:files][:bacteria_accessions]) }
-    File.open(accessions_file, "a") { |it| it.write File.read(CONFIG[:files][:archaea_accessions]) }
+    File.open(accessions_file, "w") { it.write File.read(CONFIG[:files][:bacteria_accessions]) }
+    File.open(accessions_file, "a") { it.write File.read(CONFIG[:files][:archaea_accessions]) }
   end
 
-  download_d = CONFIG[:dirs][:downloads]
-  FileUtils.mkdir_p(download_d)
+  Logger.success("Accessionリスト作成完了")
+end
+
+desc "ゲノムデータをNCBI ftpよりダウンロード"
+task :download_genomes do
+  Logger.step("ゲノムデータダウンロード")
+
+  accessions_file = CONFIG[:files][:accessions]
+  unless File.exist?(accessions_file)
+    Logger.error("Accessionリストが見つかりません。先に rake create_accession_list を実行してください。")
+    raise "Missing accessions file: #{accessions_file}"
+  end
+
+  FileUtils.mkdir_p(CONFIG[:dirs][:downloads])
 
   lines      = File.readlines(accessions_file, chomp: true)
   accessions = lines.map(&:strip).reject(&:empty?)
-
   Logger.info("全 #{accessions.size} 件のダウンロードを開始")
+
   accessions.each_with_index do |acc, index|
     target_data_dir = Paths.downloads("ncbi_dataset", "data", acc)
-
     if Dir.exist?(target_data_dir) && !Dir.empty?(target_data_dir)
       Logger.progress(index + 1, accessions.size, "#{acc}: ✅ 完了済み (スキップ)")
       next
@@ -71,14 +103,12 @@ task :download_genomes do
 
     zip_path = Paths.downloads("#{acc}.zip")
     File.delete(zip_path) if File.exist?(zip_path)
-
     Logger.progress(index + 1, accessions.size, "#{acc}: ⬇️ ダウンロード開始")
 
     cmd = "datasets download genome accession #{acc} \
     --api-key #{CONFIG[:ncbi_api_key]} \
     --include protein,gff3 \
     --filename #{zip_path}"
-
     env = CONFIG[:download][:http2_disabled] ? { 'GODEBUG' => 'http2client=0' } : {}
 
     if system(env, cmd)
@@ -92,36 +122,24 @@ task :download_genomes do
       Logger.error("#{acc}: ダウンロード失敗")
       File.open("error_list.txt", "a") { |f| f.puts acc }
     end
+
     sleep CONFIG[:download][:retry_wait]
   end
 
   Logger.success("ダウンロード完了")
 end
 
+# -----------------------------------------------------------------------------
+# ホモログ検索
+# -----------------------------------------------------------------------------
 
-desc "queryのホモログをgenome dbよりdiamondで探す"
-task :homologs_search do
-  Logger.step("ホモログ検索")
+desc "【single mode】単一queryタンパク質でDiamond検索"
+task :homologs_search_single do
+  Logger.step("ホモログ検索 (single mode)")
 
   query = CONFIG[:files][:query_protein]
 
-  unless File.exist?(Paths.shared("all_genome_proteins.faa"))
-    Logger.info("全ゲノムタンパク質ファイルを結合中...")
-    faa = File.open(Paths.shared("all_genome_proteins.faa"), "w")
-    Dir.glob(Paths.downloads("ncbi_dataset", "data", "**", "protein.faa")).each do |fp|
-      /\/data\/(.+)\/protein\.faa/ =~ fp
-      acc = $1
-      File.foreach(fp) do |line|
-        faa.puts line.sub(/^>/, ">#{acc}_")
-      end
-    end
-    faa.close
-  end
-
-  unless File.exist?(Paths.shared("reference_genomes_db.dmnd"))
-    Logger.info("Diamondデータベース構築中...")
-    sh "diamond makedb --in #{Paths.shared('all_genome_proteins.faa')} -d #{Paths.shared('reference_genomes_db')}"
-  end
+  _build_genome_db_if_needed
 
   Logger.info("Diamond検索実行中...")
   sh "diamond blastp \
@@ -146,9 +164,128 @@ task :homologs_search do
     end
   end
 
-  Logger.success("ホモログリスト作成完了")
+  # multiモードとファイル名を統一するためコピーを作成
+  FileUtils.cp(Paths.output("query_homolog_list.txt"), Paths.output("all_query_homolog_list.txt"))
+  Logger.info("all_query_homolog_list.txt を作成 (query_homolog_list.txt のコピー)")
+
+  Logger.success("ホモログリスト作成完了 (single mode)")
 end
 
+desc "【multi mode】mfastaの各配列をThreadで並列Diamond検索\n  CONFIG[:files][:multi_query_mfasta] を使用"
+task :homologs_search_multi do
+  Logger.step("ホモログ検索 (multi mode)")
+
+  mfasta_path = Paths.input(CONFIG[:files][:multi_query_mfasta])
+  unless File.exist?(mfasta_path)
+    Logger.error("mfastaファイルが見つかりません: #{mfasta_path}")
+    raise "Missing mfasta: #{mfasta_path}"
+  end
+
+  _build_genome_db_if_needed
+
+  # 全エントリを先に読み込む
+  entries = []
+  Bio::FlatFile.auto(mfasta_path).each_with_index do |ff, i|
+    entries << { index: i, entry_id: ff.entry_id, seq: ff.seq.to_s }
+  end
+  Logger.info("#{entries.size} 配列を並列処理します (Thread)")
+
+  mutex = Mutex.new
+  threads = entries.map do |entry|
+    Thread.new do
+      i         = entry[:index]
+      entry_id  = entry[:entry_id]
+      tsv_path  = Paths.output("diamond_results_#{i}.tsv")
+      list_path = Paths.output("query_homolog_list_#{i}.txt")
+
+      Tempfile.create(["seq_#{i}_", ".fasta"]) do |tmpfile|
+        tmpfile.puts ">#{entry_id}"
+        tmpfile.puts entry[:seq]
+        tmpfile.flush
+
+        cmd = "diamond blastp \
+        -k #{CONFIG[:diamond][:subject_size]} \
+        -b #{CONFIG[:diamond][:block]} \
+        -q #{tmpfile.path} \
+        -d #{Paths.shared('reference_genomes_db')} \
+        -o #{tsv_path} \
+        -e #{CONFIG[:diamond][:evalue]} \
+        --id #{CONFIG[:diamond][:identity]} \
+        --subject-cover #{CONFIG[:diamond][:coverage]} \
+        --query-cover #{CONFIG[:diamond][:coverage]} \
+        --#{CONFIG[:diamond][:sensitivity]} \
+        --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qcovhsp"
+
+        stdout, stderr, status = Open3.capture3(cmd)
+        mutex.synchronize do
+          if status.success?
+            Logger.info("#{entry_id} (index: #{i}): Diamond完了")
+          else
+            Logger.error("#{entry_id} (index: #{i}): Diamond失敗\n#{stderr}")
+            raise "Diamond failed for entry #{i} (#{entry_id})"
+          end
+        end
+      end
+
+      File.open(list_path, "w") do |f|
+        CSV.foreach(tsv_path, col_sep: "\t") do |row|
+          if row[10].to_f <= CONFIG[:diamond][:evalue] && row[12].to_f > CONFIG[:diamond][:coverage]
+            f.puts row[1]
+          end
+        end
+      end
+    end
+  end
+  threads.each(&:join)
+
+  # primary query のリストを query_homolog_list.txt としてコピー
+  primary_idx  = CONFIG[:files][:multi_primary_query_position]
+  primary_list = Paths.output("query_homolog_list_#{primary_idx}.txt")
+  unless File.exist?(primary_list)
+    raise "primary query (index: #{primary_idx}) のhomolog listが見つかりません: #{primary_list}"
+  end
+  FileUtils.cp(primary_list, Paths.output("query_homolog_list.txt"))
+  Logger.info("primary query (index: #{primary_idx}) → query_homolog_list.txt にコピー")
+
+  # 全配列のhomologをマージした all_query_homolog_list.txt を作成
+  all_subjects = []
+    Dir.glob(Paths.output("query_homolog_list_*.txt")).each do |path|
+      all_subjects.concat(File.readlines(path, chomp: true))
+    end
+    all_subjects.uniq!
+    File.open(Paths.output("all_query_homolog_list.txt"), "w") do |f|
+      f.write(all_subjects.join("\n"))
+    end
+  Logger.info("全配列マージ (#{all_subjects.size} unique) → all_query_homolog_list.txt")
+  Logger.success("ホモログリスト作成完了 (multi mode)")
+end
+
+# -----------------------------------------------------------------------------
+# 内部ヘルパー: DBがなければ構築（single/multi共通）
+# -----------------------------------------------------------------------------
+def _build_genome_db_if_needed
+  unless File.exist?(Paths.shared("all_genome_proteins.faa"))
+    Logger.info("全ゲノムタンパク質ファイルを結合中...")
+    File.open(Paths.shared("all_genome_proteins.faa"), "w") do |faa|
+      Dir.glob(Paths.downloads("ncbi_dataset", "data", "**", "protein.faa")).each do |fp|
+        /\/data\/(.+)\/protein\.faa/ =~ fp
+        acc = $1
+        File.foreach(fp) do |line|
+          faa.puts line.sub(/^>/, ">#{acc}_")
+        end
+      end
+    end
+  end
+
+  unless File.exist?(Paths.shared("reference_genomes_db.dmnd"))
+    Logger.info("Diamondデータベース構築中...")
+    sh "diamond makedb --in #{Paths.shared('all_genome_proteins.faa')} -d #{Paths.shared('reference_genomes_db')}"
+  end
+end
+
+# -----------------------------------------------------------------------------
+# MSA → 系統樹（single/multi共通）
+# -----------------------------------------------------------------------------
 
 desc "MSAからのTree作成"
 task :make_tree do
@@ -183,7 +320,6 @@ task :make_tree do
   Logger.success("系統樹作成完了")
 end
 
-
 desc " [Do This!] 系統樹の距離分布を確認して閾値を決める（runフォルダを作らない）\n使用法: rake tree_analysis [DIR=フォルダ名]"
 task :tree_analysis do
   if ENV['DIR']
@@ -191,7 +327,7 @@ task :tree_analysis do
   elsif File.exist?(File.join(CONFIG[:dirs][:output], "latest"))
     target_dir = File.join(CONFIG[:dirs][:output], "latest")
   else
-    Logger.error("解析対象が見つかりません。先に rake prepare_tree を実行してください。")
+    Logger.error("解析対象が見つかりません。先に rake prepare_tree_single または rake prepare_tree_multi を実行してください。")
     exit 1
   end
 

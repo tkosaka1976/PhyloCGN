@@ -2,18 +2,23 @@ require 'shellwords'
 require 'fileutils'
 require 'csv'
 require 'yaml'
+require 'bio'
+require 'tempfile'
+require 'open3'
 
 # =============================================================================
 # 設定セクション（ここを編集してパラメータ調整）
 # =============================================================================
 
-VERSION = "0.9.2"
+VERSION = "0.9.3"
 
 CONFIG = {
 
   # 入力ファイル
   files: {
     query_protein: "",
+    multi_query_mfasta: "hyd_PTH_1701-4.mfasta",
+    multi_primary_query_position: 1,
     accessions: "accessions.txt",
     bacteria_accessions: "bacteria_accessions.txt",
     archaea_accessions: "archaea_accessions.txt"
@@ -31,9 +36,9 @@ CONFIG = {
   # デフォルトパラメーター for do_all
   
   params_default: {
-    updown: 10,
-    dist:   2.0,
-    score:  0.9,
+    updown: 5,
+    dist:   1.0,
+    score:  1.0,
   },
 
   # Diamond検索パラメータ
@@ -42,8 +47,8 @@ CONFIG = {
     block: 0.7,
     evalue: 1e-10,
     coverage: 80,
-    identity: 35,
-    sensitivity: "very-sensitive"
+    identity: 50,
+    sensitivity: "fast" # fast mid-sensitive very-sensitive ultra-sensitive
   },
 
   # mmseqs
