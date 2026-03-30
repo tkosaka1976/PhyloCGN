@@ -5,15 +5,17 @@
 desc [
   " 全Phase[1,2,3]を一括実行（新runフォルダを作成）",
   "使用法:",
-  "  rake do_all UPDOWN=10 DIST=3.0 SCORE=0.9             # 全Phase実行",
-  "  rake do_all REUSE_TREE=20260315_001 UPDOWN=10 DIST=3.0 SCORE=0.9  # Phase1をスキップ",
-  "  rake do_all REUSE_NEIGHBOR=20260315_001 DIST=3.0 SCORE=0.9        # Phase1+2をスキップ",
+  "  rake do_all MODE=single UPDOWN=10 DIST=3.0 SCORE=0.9             # 全Phase実行（single mode）",
+  "  rake do_all MODE=multi  UPDOWN=10 DIST=3.0 SCORE=0.9             # 全Phase実行（multi mode）",
+  "  rake do_all MODE=single REUSE_TREE=20260315_001 UPDOWN=10 DIST=3.0 SCORE=0.9  # Phase1をスキップ",
+  "  rake do_all MODE=single REUSE_NEIGHBOR=20260315_001 DIST=3.0 SCORE=0.9        # Phase1+2をスキップ",
 ].join("\n")
 
 task :do_all do
   dist   = ENV['DIST']   ? ENV['DIST'].to_f  : CONFIG[:params_default][:dist]
   score  = ENV['SCORE']  ? ENV['SCORE'].to_f : CONFIG[:params_default][:score]
   updown = ENV['UPDOWN'] ? ENV['UPDOWN'].to_i : CONFIG[:params_default][:updown]
+  mode   = ENV['MODE']
 
   reuse_tree     = ENV['REUSE_TREE']
   reuse_neighbor = ENV['REUSE_NEIGHBOR']
@@ -54,10 +56,16 @@ task :do_all do
 
       RunManager.save_run_params(phase: "prepare_tree(reused)", extra: { reused_tree: source })
     else
+      unless %w[single multi].include?(mode)
+        Logger.error("MODE の指定が必要です。MODE=single または MODE=multi を指定してください。")
+        raise "Missing or invalid MODE: #{mode.inspect}"
+      end
+
+      Logger.step("Phase 1: prepare_tree_#{mode}")
       Rake::Task[:download_genomes].invoke
-      Rake::Task[:homologs_search].invoke
+      Rake::Task[mode == "single" ? :homologs_search_single : :homologs_search_multi].invoke
       Rake::Task[:make_tree].invoke
-      RunManager.save_run_params(phase: "prepare_tree")
+      RunManager.save_run_params(phase: "prepare_tree_#{mode}")
     end
 
     # ------------------------------------------------------------------

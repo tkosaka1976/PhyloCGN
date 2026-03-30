@@ -93,8 +93,14 @@ NCBI API KEY can be obtained from [ncbi website](https://www.ncbi.nlm.nih.gov) w
 Execute the full pipeline with a single command:
 
 ```bash
-rake do_all UPDOWN=XX DIST=XX SCORE=XX
+# Single query mode
+rake do_all MODE=single UPDOWN=XX DIST=XX SCORE=XX
+
+# Multi query mode
+rake do_all MODE=multi UPDOWN=XX DIST=XX SCORE=XX
 ```
+
+> `MODE=single` or `MODE=multi` is **required**. Omitting `MODE` will raise an error.
 
 _To see all available tasks, run:_ `rake -T`
 
@@ -103,7 +109,7 @@ _To see all available tasks, run:_ `rake -T`
 - rake clobber                                  # Remove any generated files
 - rake clustering_genomic_neiborhood            # genomic neighborhood のクラスター構築
 - rake create_accession_list_reference_genomes  # AccessionリストをNCBI FTPより取得・生成
-- rake do_all                                   # 全Phase[1,2,3]を一括実行（新runフォルダ...
+- rake do_all                                   # 全Phase[1,2,3]を一括実行（MODE=single or multi 必須）
 - rake download_genomes                         # ゲノムデータをNCBI ftpよりダウンロード
 - rake gathering_genomic_neiborhood             # 近傍遺伝子を集める
 - rake homologs_search_multi                    # 【multi mode】mfastaの各配列をThre...
