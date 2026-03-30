@@ -139,8 +139,8 @@ view_app/read_input-tree&gcl.html can be used for showing the results. Please us
 ## Recommended analysis steps
 1. `rake prepare_tree_single` or `rake prepare_tree_multi`
 2. `rake tree_analysis [latest_output_runs_DIR_name]`
-3. rake neighborhood UPDOWN=XX
-4. rake analyze_pcgn DIST=XX SCORE=XX
+3. `rake neighborhood UPDOWN=XX`
+4. `rake analyze_pcgn DIST=XX SCORE=XX`
 5. (rake neighborhood and rake analyze_pcgn can use BASE=DIR_name for new run.)
 
 ## Note
