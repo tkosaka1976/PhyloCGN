@@ -6,16 +6,12 @@ require 'optparse'
 # 設定
 # ==========================================
 
-# ★閾値 (TreeClusterの -t オプションに相当)
 params = ARGV.getopts("","threshold:0.5","input:","output:")
 
 THRESHOLD   = params["threshold"].to_f
-
 INPUT_FILE  = params["input"]
 OUTPUT_CSV  = "#{params["output"]}_cut.csv"
 OUTPUT_JSON = "#{params["output"]}_cut.json"
-#OUTPUT_CSV  = "#{params["output"]}-cut[#{THRESHOLD}].csv"
-#OUTPUT_JSON = "#{params["output"]}-cut[#{THRESHOLD}].json"
 
 
 # ==========================================
@@ -25,18 +21,24 @@ OUTPUT_JSON = "#{params["output"]}_cut.json"
 class Node
   attr_accessor :name, :length, :children
   # 解析用プロパティ
-  attr_accessor :height         # このノードから最も遠い葉までの距離
-  attr_accessor :diameter       # このノード以下の最大ペア距離（直径）
-  attr_accessor :cluster_id     # 割り当てられたクラスタID
-  attr_accessor :color          # 色
+  attr_accessor :cluster_id   # 割り当てられたクラスタID
+  attr_accessor :color        # 色
+
+  # avg_clade 用プロパティ
+  attr_accessor :num_leaves        # このノード以下の葉の数
+  attr_accessor :total_leaf_dist   # 各葉からこのノードまでの距離合計
+  attr_accessor :total_pair_dist   # クレード内の全ペアワイズ距離合計
+  attr_accessor :avg_pair_dist     # 平均ペアワイズ距離
 
   def initialize
     @name = ""
     @length = 0.0
     @children = []
     @cluster_id = nil
-    @height = 0.0
-    @diameter = 0.0
+    @num_leaves = 0
+    @total_leaf_dist = 0.0
+    @total_pair_dist = 0.0
+    @avg_pair_dist = 0.0
   end
 
   def is_leaf?
@@ -47,132 +49,135 @@ class Node
     return [self] if is_leaf?
     @children.flat_map(&:get_leaves)
   end
-  
+
   def to_h
     {
       name: @name,
       length: @length,
       cluster: @cluster_id,
-      diameter: @diameter.round(6),
+      avg_pair_dist: @avg_pair_dist.round(6),
       children: @children.map(&:to_h)
     }
   end
 end
 
-class StrictTreeClusterer
+class AvgCladeTreeClusterer
   def initialize(file_path)
     content = File.read(file_path).strip
     puts "Parsing Newick file..."
     @root = parse_newick_robust(content)
     puts " -> Total leaves: #{@root.get_leaves.size}"
-    
-    # クラスタごとの情報を保存するハッシュ { id => { diameter: 0.123, ... } }
+
     @cluster_stats = {}
 
-    # 1. 幾何情報の計算（ボトムアップ）
-    puts "Calculating node heights and diameters..."
-    calculate_geometry(@root)
-    puts " -> Root Diameter: #{@root.diameter.round(6)}"
+    # 1. avg_clade用の幾何情報計算（ボトムアップ）
+    puts "Calculating avg_clade geometry (bottom-up)..."
+    calculate_avg_geometry(@root)
+    puts " -> Root avg_pair_dist: #{@root.avg_pair_dist.round(6)}"
   end
 
   def run(threshold)
-    puts "Clustering with Threshold = #{threshold} (Max-Clade Method)..."
+    puts "Clustering with Threshold = #{threshold} (Avg-Clade Method)..."
     @cluster_counter = 0
     @threshold = threshold
-    @cluster_stats = {} # リセット
+    @cluster_stats = {}
 
     # 2. クラスタリング判定（トップダウン）
     decompose_tree(@root)
-    
+
     # 3. シングルトン処理（漏れ防止）
     assign_singletons(@root)
-    
+
     puts " -> Generated #{@cluster_counter} clusters."
   end
-  
+
   def save_outputs
-    # 色付け
     color_map = generate_colors(@cluster_counter)
     leaves = @root.get_leaves
-    
-    # CSV出力
+
     CSV.open(OUTPUT_CSV, "w") do |csv|
-      # ヘッダー
-      csv << %w"Sequence_ID Cluster_ID Color_Hex Cluster_Diameter"
-      
+      csv << %w"Sequence_ID Cluster_ID Color_Hex Cluster_AvgPairDist"
       leaves.each do |leaf|
-        # クラスタIDに対応する色
         cid = leaf.cluster_id
         color = color_map[cid] || "#000000"
-        
-        # ★ここで保存しておいた直径を取り出す
-        diam_val = @cluster_stats[cid] ? @cluster_stats[cid][:diameter] : 0.0
-        
+        avg_val = @cluster_stats[cid] ? @cluster_stats[cid][:avg_pair_dist] : 0.0
         name_str = (leaf.name.nil? || leaf.name.strip.empty?) ? "Unnamed" : leaf.name
-        
-        # CSV書き込み
-        csv << [name_str, cid, color, diam_val.round(6)]
+        csv << [name_str, cid, color, avg_val.round(6)]
       end
     end
     puts "✅ Saved CSV: #{OUTPUT_CSV}"
 
-    # JSON出力
     File.open(OUTPUT_JSON, "w") { |f| f.write(JSON.pretty_generate(@root.to_h, max_nesting: false)) }
     puts "✅ Saved JSON: #{OUTPUT_JSON}"
   end
 
   private
 
-  # --- A. 幾何計算 (Bottom-Up) ---
-  def calculate_geometry(node)
+  # --- A. avg_clade幾何計算 (Bottom-Up) ---
+  # TreeCluster.py の min_clusters_threshold_avg_clade と同じロジック
+  def calculate_avg_geometry(node)
     if node.is_leaf?
-      node.height = 0.0
-      node.diameter = 0.0
+      node.num_leaves      = 1
+      node.total_pair_dist = 0.0
+      node.total_leaf_dist = 0.0
+      node.avg_pair_dist   = 0.0
       return
     end
 
-    # 子ノードを再帰計算
-    node.children.each { |c| calculate_geometry(c) }
+    node.children.each { |c| calculate_avg_geometry(c) }
 
-    # Heightの計算: 最も深い子供への距離 (子Height + 子への枝)
-    paths_to_tips = node.children.map { |c| c.height + c.length }
-    node.height = paths_to_tips.max || 0.0
+    # 子が2つのみ（prepでpolytomyが解消されている前提）
+    # ※ ここでは子が3つ以上でも対応できるよう汎用的に実装
+    node.num_leaves = node.children.sum(&:num_leaves)
 
-    # Diameterの計算
-    # 1. このノードをまたぐパス (Top 2 heights)
-    cross_diameter = 0.0
-    if paths_to_tips.size >= 2
-      sorted = paths_to_tips.sort.reverse
-      cross_diameter = sorted[0] + sorted[1]
-    elsif paths_to_tips.size == 1
-      cross_diameter = paths_to_tips[0]
+    # 各子ノードのtotal_leaf_distをこのノード基準に更新
+    # total_leaf_dist_thru_c = c.total_leaf_dist + c.num_leaves * c.length
+    total_leaf_dist_thru = node.children.map do |c|
+      c.total_leaf_dist + (c.num_leaves * c.length)
     end
 
-    # 2. 子ノード内部の最大直径 (すでに計算済みの子のDiameter)
-    max_child_diameter = node.children.map(&:diameter).max || 0.0
+    node.total_leaf_dist = total_leaf_dist_thru.sum
 
-    # 大きい方を採用
-    node.diameter = [cross_diameter, max_child_diameter].max
+    # ペアワイズ距離合計の計算
+    # = 各子クレード内のペア合計 + クレードをまたぐペア合計
+    #
+    # クレードをまたぐペア(a in c_i, b in c_j, i≠j)の距離合計:
+    #   Σ_{i<j} (total_leaf_dist_thru[i] * num_leaves[j]
+    #           + total_leaf_dist_thru[j] * num_leaves[i])
+    #
+    within_pair_dist = node.children.sum(&:total_pair_dist)
+
+    across_pair_dist = 0.0
+    node.children.each_with_index do |ci, i|
+      node.children.each_with_index do |cj, j|
+        next if j <= i
+        across_pair_dist += total_leaf_dist_thru[i] * cj.num_leaves
+        across_pair_dist += total_leaf_dist_thru[j] * ci.num_leaves
+      end
+    end
+
+    node.total_pair_dist = within_pair_dist + across_pair_dist
+
+    # 平均ペアワイズ距離 = 合計 / ペア数(nC2)
+    n = node.num_leaves
+    pair_count = (n * (n - 1)) / 2.0
+    node.avg_pair_dist = pair_count > 0 ? node.total_pair_dist / pair_count : 0.0
   end
 
   # --- B. 分割ロジック (Top-Down) ---
   def decompose_tree(node)
-    return if node.cluster_id # 既に親で処理済みならスキップ
+    return if node.cluster_id
 
-    if node.diameter <= @threshold
-      # 条件クリア -> ここをクラスタとする
+    if node.avg_pair_dist <= @threshold
+      # 条件クリア → ここをクラスタとする
       @cluster_counter += 1
-      
-      # ★直径情報を記録
-      @cluster_stats[@cluster_counter] = { diameter: node.diameter }
-      
+      @cluster_stats[@cluster_counter] = { avg_pair_dist: node.avg_pair_dist }
       fill_cluster_id(node, @cluster_counter)
     else
-      # 条件満たさず -> 子供へ
       if node.is_leaf?
-        # 葉なのに閾値を超えている場合（通常ありえないが、負の閾値などのガード）
+        # 葉なのに閾値超え（通常ありえないがガード）
         @cluster_counter += 1
-        @cluster_stats[@cluster_counter] = { diameter: 0.0 }
+        @cluster_stats[@cluster_counter] = { avg_pair_dist: 0.0 }
         node.cluster_id = @cluster_counter
       else
         node.children.each { |c| decompose_tree(c) }
@@ -188,8 +193,7 @@ class StrictTreeClusterer
   def assign_singletons(node)
     if node.is_leaf? && node.cluster_id.nil?
       @cluster_counter += 1
-      # シングルトンの直径は0
-      @cluster_stats[@cluster_counter] = { diameter: 0.0 }
+      @cluster_stats[@cluster_counter] = { avg_pair_dist: 0.0 }
       node.cluster_id = @cluster_counter
     end
     node.children.each { |c| assign_singletons(c) }
@@ -201,7 +205,7 @@ class StrictTreeClusterer
     tokens = str.gsub(/([(),:;])/, ' \1 ').split(/\s+/).reject(&:empty?)
 
     root = Node.new
-    current = root; ancestors = []; state = :start 
+    current = root; ancestors = []; state = :start
 
     tokens.each do |token|
       case token
@@ -223,7 +227,7 @@ class StrictTreeClusterer
         end
       end
     end
-    
+
     if root.children.size == 1
       real_root = root.children[0]
       real_root.length += root.length
@@ -237,7 +241,7 @@ class StrictTreeClusterer
     map = {}
     (1..n).each do |i|
       hue = ((i * 137.5) % 360).round
-      map[i] = hsl_to_hex(hue, 0.75, 0.45) # 視認しやすいよう彩度・輝度を調整
+      map[i] = hsl_to_hex(hue, 0.75, 0.45)
     end
     map
   end
@@ -256,8 +260,8 @@ end
 # ==========================================
 # 実行
 # ==========================================
-puts "--- Start Strict TreeCluster Logic ---"
-clusterer = StrictTreeClusterer.new(INPUT_FILE)
+puts "--- Start Avg-Clade TreeCluster Logic ---"
+clusterer = AvgCladeTreeClusterer.new(INPUT_FILE)
 clusterer.run(THRESHOLD)
 clusterer.save_outputs
 puts "--- Done ---"
