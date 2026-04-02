@@ -37,7 +37,7 @@ task :neighborhood do
     Rake::Task[:clustering_genomic_neiborhood].invoke
 
     RunManager.save_run_params(phase: "neighborhood", extra: { updown: updown })
-    Logger.step("✅ Phase 2 完了 → 次は rake analyze_pgc DIST=xx SCORE=xx を実行してください")
+    Logger.step("✅ Phase 2 完了 → 次は rake analyze_pcgn DIST=xx SCORE=xx を実行してください")
 
   rescue => e
     RunManager.mark_failed(e.message)
