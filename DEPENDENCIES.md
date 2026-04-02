@@ -21,7 +21,7 @@
    - [MUSCLE 5](#3-5-muscle-5)
    - [VeryFastTree](#3-6-veryfasttree)
 5. [Verify All Installations](#4-verify-all-installations)
-6. [Create Gemfile (Ruby Dependency Management)](#5-create-gemfile-ruby-dependency-management)
+6. [Install Ruby Gems](#5-install-ruby-gems)
 7. [Troubleshooting](#6-troubleshooting)
 
 ---
@@ -366,35 +366,52 @@ which VeryFastTree && VeryFastTree -h 2>&1 | head -1
 
 ---
 
-## 5. Create Gemfile (Ruby Dependency Management)
+## 5. Install Ruby Gems
 
-The current repository does not include a `Gemfile`. Create one with the following steps.
+PhyloCGN uses `rake` (task runner), `sequel` (database access), and
+`sqlite3` (SQLite3 bindings for Ruby).
 
-```bash
-cd /path/to/PhyloCGN
+### 5-1. rake
 
-# Initialize Gemfile
-bundle init
-```
-
-Once the `Gemfile` is generated, add any gems required by PhyloCGN.
-(Check `require` statements in the Ruby scripts to identify what is needed.)
-
-```ruby
-# Gemfile (example)
-# frozen_string_literal: true
-
-source "https://rubygems.org"
-
-# Add required gems below, for example:
-# gem "bio"
-# gem "parallel"
-```
-
-Then install the gems:
+`rake` may already be bundled with your Ruby installation, but it's worth confirming.
 
 ```bash
-bundle install
+# Check if already installed
+gem list rake
+
+# Install if missing
+gem install rake
+
+# Verify
+rake --version
+```
+
+### 5-2. sequel
+
+A lightweight ORM library for database operations in Ruby.
+
+```bash
+gem install sequel
+
+# Verify
+gem list sequel
+```
+
+### 5-3. sqlite3
+
+The Ruby bindings for SQLite3, required by `sequel` to work with SQLite databases.
+This gem compiles native extensions, so the SQLite3 development library must be
+installed on your system first.
+
+```bash
+# Install the SQLite3 development library (Ubuntu)
+sudo apt-get install -y libsqlite3-dev
+
+# Install the gem
+gem install sqlite3
+
+# Verify
+gem list sqlite3
 ```
 
 ---
