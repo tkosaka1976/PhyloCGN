@@ -70,7 +70,7 @@ CONFIG = {
     veryfasttree: {
       model: "lg",
       gamma: true,
-      spr: 4,
+      #spr: 4,
       threads: 2
     },
     muscle_version: "5",

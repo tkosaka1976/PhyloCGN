@@ -313,7 +313,7 @@ task :make_tree do
   tree_opts  = CONFIG[:tools][:veryfasttree]
   gamma_flag = tree_opts[:gamma] ? "-gamma" : ""
   sh "VeryFastTree \
-  -#{tree_opts[:model]} #{gamma_flag} -spr #{tree_opts[:spr]} -threads #{tree_opts[:threads]} \
+  -#{tree_opts[:model]} #{gamma_flag} -threads #{tree_opts[:threads]} \
   #{Paths.intermediate('diamond_hits.afa')} \
   > #{Paths.output('diamond_hits.tree')}"
 
