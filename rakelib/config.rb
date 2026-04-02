@@ -16,14 +16,14 @@ CONFIG = {
 
   # 入力ファイル
   files: {
-    query_protein: "Methanogen_Mdef_focA.fasta",
-    multi_query_mfasta: "hyd_PTH_1701-4.mfasta",
-    multi_primary_query_position: 1,
+    query_protein: "",
+    multi_query_mfasta: "",
+    multi_primary_query_position: 0,
     accessions: "accessions.txt",
     bacteria_accessions: "bacteria_accessions.txt",
     archaea_accessions: "archaea_accessions.txt",
-    db_protein_seqs: "archaea_references.mfasta",
-    diamond_db: "archaea_references",
+    db_protein_seqs: "all_genome_proteins.mfasta",
+    diamond_db: "reference_genomes",
   },
 
   # ディレクトリ構成
@@ -39,7 +39,7 @@ CONFIG = {
   
   params_default: {
     updown: 10,
-    dist:   5.0,
+    dist:   0.5,
     score:  1.0,
   },
 

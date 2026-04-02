@@ -30,17 +30,3 @@ analysis_results.each do |cluster, data|
   contents = contents.sort_by(&:last).reverse.map{ it.join(" ") }
   out_f.puts [cluster, contents.join(":")].to_csv#(col_sep:"\t")
 end
-
-=begin
-.group(:cluster_id)
-.select(
-:cluster_id,
-Sequel.qualify(:genome_db, :genome_taxonomy)[:Organism],
-Sequel.qualify(:genome_db, :genome_taxonomy)[:phylum]
-).to_hash(:cluster_id)
-
-.to_hash_groups(:cluster_id, Sequel.qualify(:genome_db, :genome_taxonomy)[:phylum])
-
-
-
-=end

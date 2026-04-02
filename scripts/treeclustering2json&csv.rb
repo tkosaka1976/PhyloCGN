@@ -96,7 +96,7 @@ class AvgCladeTreeClusterer
     leaves = @root.get_leaves
 
     CSV.open(OUTPUT_CSV, "w") do |csv|
-      csv << %w"Sequence_ID Cluster_ID Color_Hex Cluster_AvgPairDist"
+      csv << %w"Sequence_ID Clade_ID Color_Hex Clade_AvgPairDist"
       leaves.each do |leaf|
         cid = leaf.cluster_id
         color = color_map[cid] || "#000000"
