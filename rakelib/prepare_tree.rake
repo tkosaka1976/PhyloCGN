@@ -146,7 +146,7 @@ task :homologs_search_single do
   -k #{CONFIG[:diamond][:subject_size]} \
   -b #{CONFIG[:diamond][:block]} \
   -q #{Paths.input(query)} \
-  -d #{Paths.shared('reference_genomes_db')} \
+  -d #{Paths.shared(CONFIG[:files][:diamond_db])} \
   -o #{Paths.output('diamond_results_full.tsv')} \
   -e #{CONFIG[:diamond][:evalue]} \
   --id #{CONFIG[:diamond][:identity]} \
@@ -207,7 +207,7 @@ task :homologs_search_multi do
         -k #{CONFIG[:diamond][:subject_size]} \
         -b #{CONFIG[:diamond][:block]} \
         -q #{tmpfile.path} \
-        -d #{Paths.shared('reference_genomes_db')} \
+        -d #{Paths.shared(CONFIG[:files][:diamond_db])} \
         -o #{tsv_path} \
         -e #{CONFIG[:diamond][:evalue]} \
         --id #{CONFIG[:diamond][:identity]} \
@@ -264,22 +264,25 @@ end
 # 内部ヘルパー: DBがなければ構築（single/multi共通）
 # -----------------------------------------------------------------------------
 def _build_genome_db_if_needed
-  unless File.exist?(Paths.shared("all_genome_proteins.faa"))
-    Logger.info("全ゲノムタンパク質ファイルを結合中...")
-    File.open(Paths.shared("all_genome_proteins.faa"), "w") do |faa|
+  unless File.exist?(Paths.shared(CONFIG[:files][:db_protein_seqs]))
+    Logger.info("ターゲットゲノムタンパク質ファイルを結合中...")
+    target_list = File.readlines(CONFIG[:files][:accessions], chomp: true)
+    File.open(Paths.shared(CONFIG[:files][:db_protein_seqs]), "w") do |faa|
       Dir.glob(Paths.downloads("ncbi_dataset", "data", "**", "protein.faa")).each do |fp|
         /\/data\/(.+)\/protein\.faa/ =~ fp
         acc = $1
-        File.foreach(fp) do |line|
-          faa.puts line.sub(/^>/, ">#{acc}_")
+        if target_list.include? acc
+          File.foreach(fp) do |line|
+            faa.puts line.sub(/^>/, ">#{acc}_")
+          end
         end
       end
     end
   end
 
-  unless File.exist?(Paths.shared("reference_genomes_db.dmnd"))
+  unless File.exist?(Paths.shared("#{CONFIG[:files][:diamond_db]}.dmnd"))
     Logger.info("Diamondデータベース構築中...")
-    sh "diamond makedb --in #{Paths.shared('all_genome_proteins.faa')} -d #{Paths.shared('reference_genomes_db')}"
+    sh "diamond makedb --in #{Paths.shared(CONFIG[:files][:db_protein_seqs])} -d #{Paths.shared(CONFIG[:files][:diamond_db])}"
   end
 end
 
@@ -293,7 +296,7 @@ task :make_tree do
 
   Logger.info("配列抽出中...")
   sh "seqkit grep -f #{Paths.output('query_homolog_list.txt')} \
-   #{Paths.shared('all_genome_proteins.faa')} \
+   #{Paths.shared(CONFIG[:files][:db_protein_seqs])} \
    > #{Paths.intermediate('diamond_hits.fasta')}"
 
   fasta_file     = Paths.intermediate('diamond_hits.fasta')

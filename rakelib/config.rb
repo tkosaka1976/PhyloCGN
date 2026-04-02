@@ -6,22 +6,24 @@ require 'bio'
 require 'tempfile'
 require 'open3'
 
+VERSION = "0.9.5"
+
 # =============================================================================
 # 設定セクション（ここを編集してパラメータ調整）
 # =============================================================================
-
-VERSION = "0.9.3"
 
 CONFIG = {
 
   # 入力ファイル
   files: {
-    query_protein: "",
+    query_protein: "Methanogen_Mdef_focA.fasta",
     multi_query_mfasta: "hyd_PTH_1701-4.mfasta",
     multi_primary_query_position: 1,
     accessions: "accessions.txt",
     bacteria_accessions: "bacteria_accessions.txt",
-    archaea_accessions: "archaea_accessions.txt"
+    archaea_accessions: "archaea_accessions.txt",
+    db_protein_seqs: "archaea_references.mfasta",
+    diamond_db: "archaea_references",
   },
 
   # ディレクトリ構成
@@ -36,8 +38,8 @@ CONFIG = {
   # デフォルトパラメーター for do_all
   
   params_default: {
-    updown: 5,
-    dist:   1.0,
+    updown: 10,
+    dist:   5.0,
     score:  1.0,
   },
 
@@ -47,7 +49,7 @@ CONFIG = {
     block: 0.7,
     evalue: 1e-10,
     coverage: 80,
-    identity: 50,
+    identity: 30,
     sensitivity: "fast" # fast mid-sensitive very-sensitive ultra-sensitive
   },
 
