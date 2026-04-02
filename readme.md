@@ -2,8 +2,11 @@
 
 ### **Discover the "Functional Partners" of Your Protein via Evolutionary Context.**
 
-**Version 0.9.4 (Beta)**  
+**Version 0.9.5 (Beta)**  
 > 💡 **Note:** This is a pre-release version. Final adjustments are ongoing.
+
+**⚠️ Caution!**
+Please use over **v0.9.5** because the tree clustering algorithm was misconstructed. Before the version, the algorithm used was max_clade, not avg_clade. Now be ave_clade calculation.
 
 **✅ Update (v0.9.3):**
 PhyloCGN now supports both single and multi-query modes for homolog search.
