@@ -107,26 +107,27 @@ module RunManager
 
     def save_run_params(phase: nil, extra: {})
       run_dir = current_run_dir
-      params_file = File.join(run_dir, "run_params.yml")
+      condition_file = File.join(run_dir, "Condition.txt")
 
-      # 既存のrun_params.ymlがあれば読み込んでマージ
-      existing = File.exist?(params_file) ? YAML.load_file(params_file) : {}
+      # 既存の Condition.txt があれば created_at だけ引き継ぐ
+      existing_created_at = if File.exist?(condition_file)
+        line = File.readlines(condition_file).find { |l| l.start_with?("作成日時") }
+        line&.split(":", 2)&.last&.strip
+      end
 
-      params_data = existing.merge({
+      params_data = {
         last_updated:  Time.now.iso8601,
         last_phase:    phase,
         ruby_version:  RUBY_VERSION,
         git_commit:    `git rev-parse HEAD 2>/dev/null`.chomp,
         hostname:      `hostname`.chomp,
         config:        CONFIG.reject { |k, _| k == :ncbi_api_key },
-      }).merge(extra)
+      }.merge(extra)
 
       # 初回のみ作成タイムスタンプを記録
-      params_data[:created_at] ||= Time.now.iso8601
+      params_data[:created_at] = existing_created_at || Time.now.iso8601
 
-      File.open(params_file, "w") { |f| f.write(params_data.to_yaml) }
-
-      write_readme(run_dir, params_data)
+      write_condition(run_dir, params_data)
 
       update_summary_params(params_data[:updown], params_data[:dist], params_data[:score])
     end
@@ -256,8 +257,8 @@ module RunManager
       File.write(summary_file, lines.join)
     end
 
-    def write_readme(run_dir, params)
-      File.open(File.join(run_dir, "README.txt"), "w") do |f|
+    def write_condition(run_dir, params)
+      File.open(File.join(run_dir, "Condition.txt"), "w") do |f|
         f.puts "=" * 70
         f.puts "PhyloCGN 解析実行パラメータ"
         f.puts "=" * 70

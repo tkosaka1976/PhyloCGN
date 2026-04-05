@@ -110,10 +110,11 @@ task :list_runs do
     when /^running/  then '🔄'
     else                  '❌'
     end
-    params_file = File.join(CONFIG[:dirs][:output], "runs", row['run_directory'], "run_params.yml")
+    params_file = File.join(CONFIG[:dirs][:output], "runs", row['run_directory'], "Condition.txt")
     if File.exist?(params_file)
-      params = YAML.load_file(params_file)
-      cond = "dist=#{params[:dist]} updown=#{params[:updown]} score=#{params[:score]} phase=#{params[:last_phase]}"
+      lines = File.readlines(params_file)
+      extract = ->(label) { lines.find { |l| l.include?(label) }&.split(":", 2)&.last&.strip }
+      cond = "dist=#{extract.("dist")} updown=#{extract.("updown")} score=#{extract.("score")} phase=#{extract.("最終Phase")}"
     else
       cond = "(params不明)"
     end
@@ -138,7 +139,7 @@ task :show_run_params, [:dir] do |_t, args|
     next
   end
 
-  params_file = File.join(CONFIG[:dirs][:output], "runs", dir, "README.txt")
+  params_file = File.join(CONFIG[:dirs][:output], "runs", dir, "Condition.txt")
   if File.exist?(params_file)
     puts File.read(params_file)
   else
