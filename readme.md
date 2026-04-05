@@ -2,7 +2,7 @@
 
 ### **Discover the "Functional Partners" of Your Protein via Evolutionary Context.**
 
-**Version 0.9.5 (Beta)**  
+**Version 0.9.6 (Beta)**  
 > 💡 **Note:** This is a pre-release version. Final adjustments are ongoing.
 
 **⚠️ Caution!**
@@ -54,11 +54,12 @@ cd PhyloCGN
 ## 🚀 Usage
 ### 1. Prepare Input
 Place your query protein sequence (FASTA format) into the "input" folder. Please make the "input" folder before doing that.
+
 ### 2. Configure Rakefile
-Open Rakefile and ensure the file name matches your input:
+Open `rakelib/config.rb` and ensure the file name matches your input:
 
 ```ruby
- # Edit this section in rakelib/config.rb
+# Edit this section in rakelib/config.rb
 files: {
   query_protein: "your_protein_file.fasta"
   # Must match the file in /input
@@ -67,6 +68,7 @@ params_default: {
     updown: 10,
     dist:   2.0,
     score:  0.9,
+    taxonomy: "genus", # "class", "phylum", "genus", "species"
   },
 ```
 
@@ -93,44 +95,60 @@ Set env var via `export NCBI_API_KEY="XXX"` in your .zshrc or directly put in th
 NCBI API KEY can be obtained from [ncbi website](https://www.ncbi.nlm.nih.gov) when you make your account.
 
 ### 4. Run Analysis
-Execute the full pipeline with a single command:
 
+> **Note for zsh users:** zsh treats `[` and `]` as glob characters. Wrap the task name in single quotes when passing arguments:
+> ```bash
+> rake 'do_all[10,3.0,0.9]'
+> rake 'neighborhood[10]'
+> rake 'analyze_pcgn[3.0,0.9]'
+> ```
+
+#### Quick start — full pipeline at once
 ```bash
-# Single query mode
-rake do_all MODE=single UPDOWN=XX DIST=XX SCORE=XX
+rake do_all[updown,dist,score]
 
-# Multi query mode
-rake do_all MODE=multi UPDOWN=XX DIST=XX SCORE=XX
+# Examples:
+rake do_all[10,3.0,0.9]
+rake do_all                   # uses config defaults
 ```
 
-> `MODE=single` or `MODE=multi` is **required**. Omitting `MODE` will raise an error.
+`do_all` always runs single-query mode (uses `query_protein` in config). For multi-query, use the step-by-step workflow below.
 
-_To see all available tasks, run:_ `rake -T`
+> **Reusing previous results** to skip expensive phases:
+> ```bash
+> rake do_all[10,3.0,0.9,20260315_001]          # reuse Phase 1 tree from a past run
+> rake do_all[,,0.9,,20260315_001]              # reuse Phase 1+2 from a past run
+> ```
 
-- rake analyze_pcgn                             # 【Phase 3】 系統樹クラスタリング→保存遺伝子解...
-- rake clean                                    # Remove any temporary products
-- rake clobber                                  # Remove any generated files
-- rake clustering_genomic_neiborhood            # genomic neighborhood のクラスター構築
-- rake create_accession_list_reference_genomes  # AccessionリストをNCBI FTPより取得・生成
-- rake do_all                                   # 全Phase[1,2,3]を一括実行（MODE=single or multi 必須）
-- rake download_genomes                         # ゲノムデータをNCBI ftpよりダウンロード
-- rake gathering_genomic_neiborhood             # 近傍遺伝子を集める
-- rake homologs_search_multi                    # 【multi mode】mfastaの各配列をThre...
-- rake homologs_search_single                   # 【single mode】単一queryタンパク質でD...
-- rake make_gene_cluster_db                     # 遺伝子クラスターDBを構築
-- rake make_tree                                # MSAからのTree作成
-- rake neighborhood                             # 【Phase 2】 近傍遺伝子収集→クラスタリング
-- rake prepare_tree_multi                       # 【Phase 1 / multi】 prepare_t...
-- rake prepare_tree_single                      # 【Phase 1 / single】 prepare_...
-- rake tree_analysis                            # [Do This]
-- rake utility:cleanup_all_intermediate         # 全実行の中間ファイルを一括削除
-- rake utility:cleanup_intermediate             # 中間ファイルを削除してディスク容量を節約
-- rake utility:init                             # ディレクトリ構造を初期化
-- rake utility:list_runs                        # 過去の実行結果を一覧表示
-- rake utility:show_run_params                  # 特定の実行結果のパラメータを表示
-- rake utility:version                          # PhyloCGN バージョン確認
+#### Step-by-step workflow (recommended)
 
-The first run time should require a huge amount of data for downloading genomic data from NCBI and constructing the mmseqs database for analysis.
+**Phase 1 — Homolog search & tree construction**
+```bash
+rake prepare_tree_single   # single query mode
+rake prepare_tree_multi    # multi query mode
+```
+
+**Inspect tree & decide thresholds**
+```bash
+rake tree_analysis                  # uses latest run
+rake tree_analysis[20260315_001]    # specify a run directory
+```
+
+**Phase 2 — Genomic neighborhood collection & clustering**
+```bash
+rake neighborhood[updown]                     # write results into latest run
+rake neighborhood[10,20260316_001]            # copy Phase 1 from a past run → new run
+rake neighborhood[10,,1]                      # force new run from latest
+rake neighborhood                             # uses config defaults, latest run
+```
+
+**Phase 3 — Tree clustering & conserved gene analysis**
+```bash
+rake analyze_pcgn[dist,score]                 # write results into latest run
+rake analyze_pcgn[3.0,0.9,20260316_001]       # copy Phase 1+2 from a past run → new run
+rake analyze_pcgn[3.0,0.9,,1]                # force new run from latest
+rake analyze_pcgn                             # uses config defaults, latest run
+```
 
 ### 5. Check Results
 All results, including phylogenetic trees and conserved genomic neighborhood data, will be stored in the output folder.
@@ -138,19 +156,53 @@ All results, including phylogenetic trees and conserved genomic neighborhood dat
 _Results files_
 - **diamond_hits_cut_trim.json**: JSON file showing query homologs analyzed data (Please use in view_app) 
 - **conserved_gene_ids_cut.csv**: CSV file showing GCL of the tree clades (Please use in view_app)
-- **diamond_hits_cut_trim.tree**: Newick file of diamond_hits_cut_trim.json already trimmed by the clusterd clade
+- **diamond_hits_cut_trim.tree**: Newick file of diamond_hits_cut_trim.json already trimmed by the clustered clade
 - **tree_cluster_taxonomy.csv**: tree clade taxonomy of class level
 - **cluster_representative_functions.csv**: functions of representative protein in cluster ID are shown in GCL
 
 ### 6. Showing the results in Web browser
 view_app/read_input-tree&gcl.html can be used for showing the results. Please use this in a web browser.
 
+## Available rake tasks
+
+```
+rake analyze_pcgn[dist,score,base,new_run]          # 【Phase 3】 系統樹クラスタリング→保存遺伝子解析→結果出力
+rake clean                                          # Remove any temporary products
+rake clobber                                        # Remove any generated files
+rake clustering_genomic_neiborhood                  # genomic neighborhood のクラスター構築
+rake create_accession_list_reference_genomes        # AccessionリストをNCBI FTPより取得・生成
+rake do_all[updown,dist,score,reuse_tree,reuse_neighbor]  # 全Phase[1,2,3]を一括実行
+rake download_genomes                               # ゲノムデータをNCBI ftpよりダウンロード
+rake gathering_genomic_neiborhood[updown]           # 近傍遺伝子を集める
+rake gene_cluster_db_analysis[score]                # 保存遺伝子クラスター解析
+rake homologs_search_multi                          # 【multi mode】mfastaの各配列を並列Diamond検索
+rake homologs_search_single                         # 【single mode】単一queryタンパク質でDiamond検索
+rake make_gene_cluster_db                           # 遺伝子クラスターDBを構築
+rake make_tree                                      # MSAからのTree作成
+rake neighborhood[updown,base,new_run]              # 【Phase 2】 近傍遺伝子収集→クラスタリング
+rake prepare_tree_multi                             # 【Phase 1 / multi】 ゲノムDL→ホモログ検索→系統樹作成
+rake prepare_tree_single                            # 【Phase 1 / single】 ゲノムDL→ホモログ検索→系統樹作成
+rake tree_analysis[dir]                             # 系統樹の距離分布を確認して閾値を決める
+rake tree_clustering[dist]                          # 系統樹クラスタリング
+rake utility:cleanup_all_intermediate               # 全実行の中間ファイルを一括削除
+rake utility:cleanup_intermediate[dir]              # 中間ファイルを削除してディスク容量を節約
+rake utility:init                                   # ディレクトリ構造を初期化
+rake utility:list_runs                              # 過去の実行結果を一覧表示
+rake utility:show_run_params[dir]                   # 特定の実行結果のパラメータを表示
+rake utility:version                                # PhyloCGN バージョン確認
+```
+
+_To see all available tasks, run:_ `rake -T`
+
+The first run time should require a huge amount of data for downloading genomic data from NCBI and constructing the mmseqs database for analysis.
+
 ## Recommended analysis steps
 1. `rake prepare_tree_single` or `rake prepare_tree_multi`
-2. `rake tree_analysis [latest_output_runs_DIR_name]`
-3. `rake neighborhood UPDOWN=XX`
-4. `rake analyze_pcgn DIST=XX SCORE=XX`
-5. (rake neighborhood and rake analyze_pcgn can use BASE=DIR_name for new run.)
+2. `rake tree_analysis` or `rake tree_analysis[DIR_NAME]`
+3. `rake neighborhood[updown]`
+4. `rake analyze_pcgn[dist,score]`
+
+> **Tip:** `neighborhood` and `analyze_pcgn` accept an optional `base` argument (e.g. `rake neighborhood[10,20260316_001]`) to copy Phase 1 results from a named run into a fresh run directory, making it easy to re-run later phases with different parameters without overwriting previous results.
 
 ## Note
 Now, for analysis, genomic data is constructed using "all reference genomes" from the NCBI ftp site. We can change these datasets more a smaller or larger one. Tentatively, I set it like this. If someone wants to do a different dataset, please inform us, or just try it. 
