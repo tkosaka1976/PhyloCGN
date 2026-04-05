@@ -44,14 +44,14 @@ end
 DB.create_table! :diamond_clusters do
   primary_key :id
   String  :sequence_id
-  Integer :cluster_id
+  Integer :clade_id
   String  :color_hex
   Float   :diameter
   String  :assembly_accession
   
   # 結合(JOIN)を高速にするためのインデックス
   index :sequence_id
-  index :cluster_id
+  index :clade_id
 end
 
 # ==========================================
@@ -80,9 +80,9 @@ def import_csv(db, table_name, file_path)
     elsif table_name == :diamond_clusters
       # カラムマッピング
       data[:sequence_id]      = row["Sequence_ID"]
-      data[:cluster_id]       = row["Cluster_ID"].to_i
+      data[:clade_id]       = row["Clade_ID"].to_i
       data[:color_hex]        = row["Color_Hex"]
-      data[:diameter]         = row["Cluster_Diameter"].to_f
+      data[:diameter]         = row["Clade_AvgPairDist"].to_f
       data[:assembly_accession] = row["Assembly_Accession"]
     end
     

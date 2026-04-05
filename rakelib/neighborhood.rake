@@ -2,42 +2,52 @@
 # Phase 2: neighborhood
 # ホモログ一覧 → 周囲の遺伝子検索 → クラスタリング
 # デフォルト: latestのrunフォルダに上書き
-# NEW=1 または BASE=xxx 指定時: 新runフォルダを作成
+# base指定 または new_run="1" 指定時: 新runフォルダを作成
 # =============================================================================
 
-desc " 【Phase 2】 近傍遺伝子収集→クラスタリング\n使用法: rake neighborhood UPDOWN=10 [NEW=1] [BASE=20260316_001]"
-task :neighborhood do
-  updown  = ENV['UPDOWN'] ? ENV['UPDOWN'].to_i : CONFIG[:params_default][:updown]
-  base    = ENV['BASE']
-  new_run = ENV.key?('NEW') || base
+desc <<~DESC
+  【Phase 2】 近傍遺伝子収集→クラスタリング
+  使用法: rake neighborhood[updown,base,new_run]
+    updown  : 近傍遺伝子の上下範囲（整数）  ※省略時: config デフォルト値
+    base    : コピー元 run フォルダ名        ※省略時: latest を使用、指定時は新 run
+    new_run : "1" 指定で強制的に新 run 作成  ※省略可
+  例:
+    rake neighborhood[10]
+    rake neighborhood[10,20260316_001]
+    rake neighborhood[10,,1]
+    rake neighborhood
+DESC
+task :neighborhood, [:updown, :base, :new_run] do |_t, args|
+  updown  = args[:updown].to_s.strip.then { |v| v.empty? ? CONFIG[:params_default][:updown] : v.to_i }
+  base    = args[:base].to_s.strip.then   { |v| v.empty? ? nil : v }
+  new_run = !args[:new_run].to_s.strip.empty? || base
 
   begin
     if new_run
-      # コピー元を決定（BASE指定 > latest）
       source_dir = if base
                      path = File.join(CONFIG[:dirs][:output], "runs", base)
-                     raise "BASE で指定されたディレクトリが見つかりません: #{path}" unless Dir.exist?(path)
+                     raise "base で指定されたディレクトリが見つかりません: #{path}" unless Dir.exist?(path)
                      path
                    else
                      dir = RunManager.resolve_latest_dir
-                     raise "コピー元(latest)が見つかりません。BASE=xxx で指定してください。" unless dir && Dir.exist?(dir)
+                     raise "コピー元(latest)が見つかりません。base=xxx で指定してください。" unless dir && Dir.exist?(dir)
                      dir
                    end
 
       RunManager.create_new_run!
-      Logger.step("Phase 2: neighborhood 開始 (UPDOWN=#{updown}) ★新runフォルダ")
+      Logger.step("Phase 2: neighborhood 開始 (updown=#{updown}) ★新runフォルダ")
       Logger.info("コピー元: #{File.basename(source_dir)}")
       RunManager.copy_phase1_from!(source_dir)
     else
       RunManager.use_latest_run!
-      Logger.step("Phase 2: neighborhood 開始 (UPDOWN=#{updown})")
+      Logger.step("Phase 2: neighborhood 開始 (updown=#{updown})")
     end
 
-    Rake::Task[:gathering_genomic_neiborhood].invoke
+    Rake::Task[:gathering_genomic_neiborhood].invoke(updown)
     Rake::Task[:clustering_genomic_neiborhood].invoke
 
     RunManager.save_run_params(phase: "neighborhood", extra: { updown: updown })
-    Logger.step("✅ Phase 2 完了 → 次は rake analyze_pcgn DIST=xx SCORE=xx を実行してください")
+    Logger.step("✅ Phase 2 完了 → 次は rake analyze_pcgn[dist,score] を実行してください")
 
   rescue => e
     RunManager.mark_failed(e.message)
@@ -51,11 +61,15 @@ end
 # サブタスク
 # -----------------------------------------------------------------------------
 
-desc "近傍遺伝子を集める"
-task :gathering_genomic_neiborhood do
+desc <<~DESC
+  近傍遺伝子を集める
+  使用法: rake gathering_genomic_neiborhood[updown]
+    updown : 近傍遺伝子の上下範囲（整数）  ※省略時: config デフォルト値
+DESC
+task :gathering_genomic_neiborhood, [:updown] do |_t, args|
   Logger.step("ゲノム近傍遺伝子収集")
 
-  updown = ENV['UPDOWN'] ? ENV['UPDOWN'].to_i : CONFIG[:params_default][:updown]
+  updown = args[:updown].to_s.strip.then { |v| v.empty? ? CONFIG[:params_default][:updown] : v.to_i }
 
   sh "ruby scripts/get_neighbors_csv.rb \
   --updown #{updown} \

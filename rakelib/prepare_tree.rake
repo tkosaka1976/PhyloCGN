@@ -191,6 +191,7 @@ task :homologs_search_multi do
   Logger.info("#{entries.size} 配列を並列処理します (Thread)")
 
   mutex = Mutex.new
+  errors = []
   threads = entries.map do |entry|
     Thread.new do
       i         = entry[:index]
@@ -216,27 +217,30 @@ task :homologs_search_multi do
         --#{CONFIG[:diamond][:sensitivity]} \
         --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qcovhsp"
 
-        stdout, stderr, status = Open3.capture3(cmd)
+        _stdout, stderr, status = Open3.capture3(cmd)
         mutex.synchronize do
           if status.success?
             Logger.info("#{entry_id} (index: #{i}): Diamond完了")
           else
             Logger.error("#{entry_id} (index: #{i}): Diamond失敗\n#{stderr}")
-            raise "Diamond failed for entry #{i} (#{entry_id})"
+            errors << "Diamond failed for entry #{i} (#{entry_id})"
           end
         end
       end
 
-      File.open(list_path, "w") do |f|
-        CSV.foreach(tsv_path, col_sep: "\t") do |row|
-          if row[10].to_f <= CONFIG[:diamond][:evalue] && row[12].to_f > CONFIG[:diamond][:coverage]
-            f.puts row[1]
+      unless mutex.synchronize { errors.any? }
+        File.open(list_path, "w") do |f|
+          CSV.foreach(tsv_path, col_sep: "\t") do |row|
+            if row[10].to_f <= CONFIG[:diamond][:evalue] && row[12].to_f > CONFIG[:diamond][:coverage]
+              f.puts row[1]
+            end
           end
         end
       end
     end
   end
   threads.each(&:join)
+  raise errors.join("\n") if errors.any?
 
   # primary query のリストを query_homolog_list.txt としてコピー
   primary_idx  = CONFIG[:files][:multi_primary_query_position]
@@ -249,13 +253,13 @@ task :homologs_search_multi do
 
   # 全配列のhomologをマージした all_query_homolog_list.txt を作成
   all_subjects = []
-    Dir.glob(Paths.output("query_homolog_list_*.txt")).each do |path|
-      all_subjects.concat(File.readlines(path, chomp: true))
-    end
-    all_subjects.uniq!
-    File.open(Paths.output("all_query_homolog_list.txt"), "w") do |f|
-      f.write(all_subjects.join("\n"))
-    end
+  Dir.glob(Paths.output("query_homolog_list_*.txt")).each do |path|
+    all_subjects.concat(File.readlines(path, chomp: true))
+  end
+  all_subjects.uniq!
+  File.open(Paths.output("all_query_homolog_list.txt"), "w") do |f|
+    f.puts(all_subjects.join("\n"))
+  end
   Logger.info("全配列マージ (#{all_subjects.size} unique) → all_query_homolog_list.txt")
   Logger.success("ホモログリスト作成完了 (multi mode)")
 end
@@ -280,7 +284,9 @@ def _build_genome_db_if_needed
     end
   end
 
-  unless File.exist?(Paths.shared("#{CONFIG[:files][:diamond_db]}.dmnd"))
+  db_name    = CONFIG[:files][:diamond_db]
+  dmnd_path  = Paths.shared(db_name.end_with?(".dmnd") ? db_name : "#{db_name}.dmnd")
+  unless File.exist?(dmnd_path)
     Logger.info("Diamondデータベース構築中...")
     sh "diamond makedb --in #{Paths.shared(CONFIG[:files][:db_protein_seqs])} -d #{Paths.shared(CONFIG[:files][:diamond_db])}"
   end
@@ -323,22 +329,31 @@ task :make_tree do
   Logger.success("系統樹作成完了")
 end
 
-desc " [Do This!] 系統樹の距離分布を確認して閾値を決める（runフォルダを作らない）\n使用法: rake tree_analysis [DIR=フォルダ名]"
-task :tree_analysis do
-  if ENV['DIR']
-    target_dir = File.join(CONFIG[:dirs][:output], "runs", ENV['DIR'])
-  elsif File.exist?(File.join(CONFIG[:dirs][:output], "latest"))
-    target_dir = File.join(CONFIG[:dirs][:output], "latest")
-  else
-    Logger.error("解析対象が見つかりません。先に rake prepare_tree_single または rake prepare_tree_multi を実行してください。")
-    exit 1
-  end
+desc <<~DESC
+  [Do This!] 系統樹の距離分布を確認して閾値を決める（runフォルダを作らない）
+  使用法: rake tree_analysis[dir]
+    dir : 対象 run フォルダ名  ※省略時: latest を使用
+  例:
+    rake tree_analysis[20260315_001]
+    rake tree_analysis
+DESC
+task :tree_analysis, [:dir] do |_t, args|
+  dir = args[:dir].to_s.strip.then { |v| v.empty? ? nil : v }
+
+  target_dir = if dir
+                 File.join(CONFIG[:dirs][:output], "runs", dir)
+               elsif File.exist?(File.join(CONFIG[:dirs][:output], "latest"))
+                 File.join(CONFIG[:dirs][:output], "latest")
+               else
+                 Logger.error("解析対象が見つかりません。先に rake prepare_tree_single または rake prepare_tree_multi を実行してください。")
+                 exit 1
+               end
 
   tree_file = File.join(target_dir, "results", "diamond_hits.tree")
 
   unless File.exist?(tree_file)
     Logger.error("Treeファイルが見つかりません: #{tree_file}")
-    Logger.info("例: rake tree_analysis DIR=20260315_001")
+    Logger.info("例: rake tree_analysis[20260315_001]")
     exit 1
   end
 

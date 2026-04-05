@@ -33,9 +33,9 @@ module RunManager
   class << self
 
     def current_run_dir
-      @current_run_dir || raise("RunManagerが初期化されていません。prepare_tree または do_all を先に実行してください。")
+      @current_run_dir || raise("RunManagerが初期化されていません。homologs_search_single、homologs_search_multi または do_all を先に実行してください。")
     end
-    
+
     # create_new_run! の前に呼んでコピー元を確定する
     def resolve_latest_dir
       latest_link = File.join(CONFIG[:dirs][:output], "latest")
@@ -65,25 +65,26 @@ module RunManager
                end
 
       unless target && Dir.exist?(target)
-        raise "前回の実行結果(latest)が見つかりません。先に rake prepare_tree を実行してください。"
+        raise "前回の実行結果(latest)が見つかりません。先に rake homologs_search を実行してください。"
       end
 
       @current_run_dir = target
       Logger.info("実行ディレクトリ(latest): #{File.basename(@current_run_dir)}")
     end
-    
-    # NEW指定時: 指定ディレクトリからPhase1成果物をコピー
+
+    # base指定時: 指定ディレクトリからPhase1成果物をコピー
     def copy_phase1_from!(source_dir)
       copy_files_from(source_dir, {
         "results/diamond_results_full.tsv"  => Paths.output("diamond_results_full.tsv"),
         "results/query_homolog_list.txt"    => Paths.output("query_homolog_list.txt"),
+        "results/all_query_homolog_list.txt" => Paths.output("all_query_homolog_list.txt"),
         "results/diamond_hits.tree"         => Paths.output("diamond_hits.tree"),
         "intermediate/diamond_hits.fasta"   => Paths.intermediate("diamond_hits.fasta"),
         "intermediate/diamond_hits.afa"     => Paths.intermediate("diamond_hits.afa"),
       })
     end
 
-    # NEW指定時: 指定ディレクトリからPhase1+2成果物をコピー
+    # base指定時: 指定ディレクトリからPhase1+2成果物をコピー
     def copy_phase1_and_2_from!(source_dir)
       copy_phase1_from!(source_dir)
       copy_files_from(source_dir, {
@@ -96,7 +97,7 @@ module RunManager
       })
     end
 
-    # do_all の REUSE_TREE / REUSE_NEIGHBOR 用
+    # do_all の reuse_tree / reuse_neighbor 用
     def use_existing_run!(dir_name)
       path = File.join(CONFIG[:dirs][:output], "runs", dir_name)
       raise "指定されたディレクトリが存在しません: #{path}" unless Dir.exist?(path)
@@ -126,9 +127,8 @@ module RunManager
       File.open(params_file, "w") { |f| f.write(params_data.to_yaml) }
 
       write_readme(run_dir, params_data)
-      
+
       update_summary_params(params_data[:updown], params_data[:dist], params_data[:score])
-      
     end
 
     def mark_completed
@@ -149,7 +149,7 @@ module RunManager
     end
 
     private
-    
+
     def copy_files_from(source_dir, file_map)
       Logger.info("コピー元: #{File.basename(source_dir)}")
       file_map.each do |src_rel, dest|
@@ -224,7 +224,7 @@ module RunManager
         ].join(",")
       end
     end
-    
+
     def update_summary_params(updown, dist, score)
       summary_file = File.join(CONFIG[:dirs][:output], "runs_summary.csv")
       return unless File.exist?(summary_file)
@@ -232,8 +232,8 @@ module RunManager
       if lines.last&.include?(File.basename(current_run_dir))
         row = lines.last.chomp.split(",")
         row[4] = updown || CONFIG[:params_default][:updown]
-        row[5] = dist || CONFIG[:params_default][:dist]
-        row[6] = score || CONFIG[:params_default][:score]
+        row[5] = dist   || CONFIG[:params_default][:dist]
+        row[6] = score  || CONFIG[:params_default][:score]
         lines[-1] = row.join(",") + "\n"
         File.write(summary_file, lines.join)
       end
@@ -242,11 +242,18 @@ module RunManager
     def update_status(status)
       summary_file = File.join(CONFIG[:dirs][:output], "runs_summary.csv")
       return unless File.exist?(summary_file)
+      run_dir_name = File.basename(current_run_dir)
       lines = File.readlines(summary_file)
-      if lines.last&.include?("running")
-        lines[-1] = lines[-1].gsub("running", status)
-        File.write(summary_file, lines.join)
+      updated = false
+      lines.map! do |line|
+        if !updated && line.include?(run_dir_name) && line.include?("running")
+          updated = true
+          line.gsub("running", status)
+        else
+          line
+        end
       end
+      File.write(summary_file, lines.join)
     end
 
     def write_readme(run_dir, params)
@@ -263,23 +270,23 @@ module RunManager
         f.puts "  タンパク質: #{CONFIG[:files][:query_protein]}"
         f.puts ""
         f.puts "【Diamond検索】"
-        f.puts "  E-value   : #{CONFIG[:diamond][:evalue]}"
-        f.puts "  Identity  : #{CONFIG[:diamond][:identity]}%"
-        f.puts "  Coverage  : #{CONFIG[:diamond][:coverage]}%"
+        f.puts "  e-value   : #{CONFIG[:diamond][:evalue]}"
+        f.puts "  identity  : #{CONFIG[:diamond][:identity]}%"
+        f.puts "  coverage  : #{CONFIG[:diamond][:coverage]}%"
         f.puts ""
         f.puts "【ゲノム近傍解析】"
-        f.puts "  UPDOWN    : #{params[:updown] || CONFIG[:params_default][:updown]}"
+        f.puts "  updown    : #{params[:updown] || CONFIG[:params_default][:updown]}"
         f.puts ""
         f.puts "【クラスタリング / 解析】"
-        f.puts "  DIST      : #{params[:dist]  || CONFIG[:params_default][:dist]}"
-        f.puts "  SCORE     : #{params[:score] || CONFIG[:params_default][:score]}"
+        f.puts "  dist      : #{params[:dist]  || CONFIG[:params_default][:dist]}"
+        f.puts "  score     : #{params[:score] || CONFIG[:params_default][:score]}"
         f.puts ""
         if params[:reused_tree]
           f.puts "【再利用】"
-          f.puts "  Tree元    : #{params[:reused_tree]}"
+          f.puts "  tree 元   : #{params[:reused_tree]}"
         end
         if params[:reused_neighbor]
-          f.puts "  Neighbor元: #{params[:reused_neighbor]}"
+          f.puts "  neighbor 元: #{params[:reused_neighbor]}"
         end
       end
     end

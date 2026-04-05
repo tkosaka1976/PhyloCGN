@@ -2,26 +2,27 @@
 # 便利タスク: do_all, list_runs, init, cleanup_*, version
 # =============================================================================
 
-desc [
-  " 全Phase[1,2,3]を一括実行（新runフォルダを作成）",
-  "使用法:",
-  "  rake do_all MODE=single UPDOWN=10 DIST=3.0 SCORE=0.9             # 全Phase実行（single mode）",
-  "  rake do_all MODE=multi  UPDOWN=10 DIST=3.0 SCORE=0.9             # 全Phase実行（multi mode）",
-  "  rake do_all MODE=single REUSE_TREE=20260315_001 UPDOWN=10 DIST=3.0 SCORE=0.9  # Phase1をスキップ",
-  "  rake do_all MODE=single REUSE_NEIGHBOR=20260315_001 DIST=3.0 SCORE=0.9        # Phase1+2をスキップ",
-].join("\n")
-
-task :do_all do
-  dist   = ENV['DIST']   ? ENV['DIST'].to_f  : CONFIG[:params_default][:dist]
-  score  = ENV['SCORE']  ? ENV['SCORE'].to_f : CONFIG[:params_default][:score]
-  updown = ENV['UPDOWN'] ? ENV['UPDOWN'].to_i : CONFIG[:params_default][:updown]
-  mode   = ENV['MODE']
-
-  reuse_tree     = ENV['REUSE_TREE']
-  reuse_neighbor = ENV['REUSE_NEIGHBOR']
+desc <<~DESC
+  全Phase[1,2,3]を一括実行（新runフォルダを作成）
+  使用法: rake do_all[updown,dist,score,reuse_tree,reuse_neighbor]
+    updown        : 近傍遺伝子の上下範囲（整数）  ※省略時: config デフォルト値
+    dist          : クラスタリング距離閾値（小数）  ※省略時: config デフォルト値
+    score         : 保存遺伝子スコア閾値（小数）    ※省略時: config デフォルト値
+    reuse_tree    : Phase1 をスキップして再利用する run フォルダ名  ※省略可
+    reuse_neighbor: Phase1+2 をスキップして再利用する run フォルダ名  ※省略可
+  例:
+    rake do_all[10,3.0,0.9]
+    rake do_all[10,3.0,0.9,20260315_001]
+    rake do_all[,,0.9,,20260315_001]
+DESC
+task :do_all, [:updown, :dist, :score, :reuse_tree, :reuse_neighbor] do |_t, args|
+  updown         = args[:updown].to_s.strip.then        { |v| v.empty? ? CONFIG[:params_default][:updown] : v.to_i }
+  dist           = args[:dist].to_s.strip.then          { |v| v.empty? ? CONFIG[:params_default][:dist]   : v.to_f }
+  score          = args[:score].to_s.strip.then         { |v| v.empty? ? CONFIG[:params_default][:score]  : v.to_f }
+  reuse_tree     = args[:reuse_tree].to_s.strip.then    { |v| v.empty? ? nil : v }
+  reuse_neighbor = args[:reuse_neighbor].to_s.strip.then { |v| v.empty? ? nil : v }
 
   begin
-    # 必ず新しいrunフォルダを作成
     RunManager.create_new_run!
     Logger.step("PhyloCGN 全解析パイプライン開始")
     Logger.info("出力ディレクトリ: #{RunManager.current_run_dir}")
@@ -30,42 +31,19 @@ task :do_all do
     # Phase 1: prepare_tree
     # ------------------------------------------------------------------
     if reuse_tree || reuse_neighbor
-      # treeを別runから再利用
       source = reuse_neighbor || reuse_tree
       Logger.step("Phase 1: スキップ（#{source} から再利用）")
       source_dir = File.join(CONFIG[:dirs][:output], "runs", source)
       raise "再利用元が見つかりません: #{source_dir}" unless Dir.exist?(source_dir)
 
-      # 必要なファイルをコピー
-      {
-        "results/diamond_results_full.tsv"  => Paths.output("diamond_results_full.tsv"),
-        "results/query_homolog_list.txt"    => Paths.output("query_homolog_list.txt"),
-        "results/diamond_hits.tree"         => Paths.output("diamond_hits.tree"),
-        "intermediate/diamond_hits.fasta"   => Paths.intermediate("diamond_hits.fasta"),
-        "intermediate/diamond_hits.afa"     => Paths.intermediate("diamond_hits.afa"),
-      }.each do |src_rel, dest|
-        src = File.join(source_dir, src_rel)
-        if File.exist?(src)
-          FileUtils.mkdir_p(File.dirname(dest))
-          FileUtils.cp(src, dest)
-          Logger.info("  ✓ #{File.basename(src_rel)} をコピー")
-        else
-          Logger.error("  ✗ #{src_rel} が見つかりません")
-        end
-      end
-
+      # reuse_neighbor の場合は Phase 1+2 をまとめて後でコピーするため、ここでは Phase 1 のみコピー
+      RunManager.copy_phase1_from!(source_dir) unless reuse_neighbor
       RunManager.save_run_params(phase: "prepare_tree(reused)", extra: { reused_tree: source })
     else
-      unless %w[single multi].include?(mode)
-        Logger.error("MODE の指定が必要です。MODE=single または MODE=multi を指定してください。")
-        raise "Missing or invalid MODE: #{mode.inspect}"
-      end
-
-      Logger.step("Phase 1: prepare_tree_#{mode}")
       Rake::Task[:download_genomes].invoke
-      Rake::Task[mode == "single" ? :homologs_search_single : :homologs_search_multi].invoke
+      Rake::Task[:homologs_search_single].invoke
       Rake::Task[:make_tree].invoke
-      RunManager.save_run_params(phase: "prepare_tree_#{mode}")
+      RunManager.save_run_params(phase: "prepare_tree")
     end
 
     # ------------------------------------------------------------------
@@ -74,30 +52,12 @@ task :do_all do
     if reuse_neighbor
       Logger.step("Phase 2: スキップ（#{reuse_neighbor} から再利用）")
       source_dir = File.join(CONFIG[:dirs][:output], "runs", reuse_neighbor)
+      raise "再利用元が見つかりません: #{source_dir}" unless Dir.exist?(source_dir)
 
-      {
-        "results/neighborhoods_metadata.csv"          => Paths.output("neighborhoods_metadata.csv"),
-        "results/cluster_stat_cluster_id.csv"         => Paths.output("cluster_stat_cluster_id.csv"),
-        "results/cluster_result_gene_id.csv"          => Paths.output("cluster_result_gene_id.csv"),
-        "results/cluster_representative_functions.csv"=> Paths.output("cluster_representative_functions.csv"),
-        "intermediate/neighborhoods_list.txt"         => Paths.intermediate("neighborhoods_list.txt"),
-        "intermediate/neighborhoods_list.mfasta"      => Paths.intermediate("neighborhoods_list.mfasta"),
-      }.each do |src_rel, dest|
-        src = File.join(source_dir, src_rel)
-        if File.exist?(src)
-          FileUtils.mkdir_p(File.dirname(dest))
-          FileUtils.cp(src, dest)
-          Logger.info("  ✓ #{File.basename(src_rel)} をコピー")
-        else
-          Logger.error("  ✗ #{src_rel} が見つかりません")
-        end
-      end
-
+      RunManager.copy_phase1_and_2_from!(source_dir)
       RunManager.save_run_params(phase: "neighborhood(reused)", extra: { reused_neighbor: reuse_neighbor, updown: updown })
     else
-      # ENVを一時的にセットしてサブタスクに渡す
-      ENV['UPDOWN'] ||= updown.to_s
-      Rake::Task[:gathering_genomic_neiborhood].invoke
+      Rake::Task[:gathering_genomic_neiborhood].invoke(updown)
       Rake::Task[:clustering_genomic_neiborhood].invoke
       RunManager.save_run_params(phase: "neighborhood", extra: { updown: updown })
     end
@@ -105,11 +65,9 @@ task :do_all do
     # ------------------------------------------------------------------
     # Phase 3: analyze_pcgn
     # ------------------------------------------------------------------
-    ENV['DIST']  = dist.to_s
-    ENV['SCORE'] = score.to_s
-    Rake::Task[:tree_clustering].invoke
+    Rake::Task[:tree_clustering].invoke(dist)
     Rake::Task[:make_gene_cluster_db].invoke
-    Rake::Task[:gene_cluster_db_analysis].invoke
+    Rake::Task[:gene_cluster_db_analysis].invoke(score)
     RunManager.save_run_params(phase: "analyze_pcgn", extra: { dist: dist, score: score, updown: updown })
 
     RunManager.mark_completed
@@ -135,47 +93,52 @@ namespace :utility do
 desc "過去の実行結果を一覧表示"
 task :list_runs do
   summary_file = File.join(CONFIG[:dirs][:output], "runs_summary.csv")
-
   unless File.exist?(summary_file)
     puts "実行履歴がありません"
+    puts "新しく解析を開始するには、以下のコマンドを実行してください："
+    puts "  rake do_all"
+    puts "  (パラメータ指定例: rake do_all[10,3.0,0.9])"
+    puts "  rake prepare_tree_single"
+    puts "  rake prepare_tree_multi"
     next
   end
-
   puts "\n過去の実行履歴:"
   puts "=" * 100
-
   CSV.foreach(summary_file, headers: true) do |row|
     status_icon = case row['status']
-                  when 'completed' then '✅'
-                  when /^running/  then '🔄'
-                  else                  '❌'
-                  end
-
-    # run_params.ymlから条件を読む
+    when 'completed' then '✅'
+    when /^running/  then '🔄'
+    else                  '❌'
+    end
     params_file = File.join(CONFIG[:dirs][:output], "runs", row['run_directory'], "run_params.yml")
     if File.exist?(params_file)
       params = YAML.load_file(params_file)
-      cond = "DIST=#{params[:dist]} UPDOWN=#{params[:updown]} SCORE=#{params[:score]} phase=#{params[:last_phase]}"
+      cond = "dist=#{params[:dist]} updown=#{params[:updown]} score=#{params[:score]} phase=#{params[:last_phase]}"
     else
       cond = "(params不明)"
     end
-
     puts "#{status_icon} #{row['timestamp']} | #{row['run_directory']} | #{cond}"
   end
 end
 
+desc <<~DESC
+  特定の実行結果のパラメータを表示
+  使用法: rake utility:show_run_params[dir]
+    dir : 対象 run フォルダ名  ※省略時: 履歴一覧を表示
+  例:
+    rake utility:show_run_params[20260315_001]
+DESC
+task :show_run_params, [:dir] do |_t, args|
+  dir = args[:dir].to_s.strip.then { |v| v.empty? ? nil : v }
 
-desc "特定の実行結果のパラメータを表示\n使用法: rake show_run_params DIR=20260315_001"
-task :show_run_params do
-  run_dir = ENV['DIR']
-  unless run_dir
-    puts "使用法: rake show_run_params DIR=20260315_001"
+  unless dir
+    puts "使用法: rake utility:show_run_params[20260315_001]"
     puts ""
-    Rake::Task[:list_runs].invoke
+    Rake::Task["utility:list_runs"].invoke
     next
   end
 
-  params_file = File.join(CONFIG[:dirs][:output], "runs", run_dir, "README.txt")
+  params_file = File.join(CONFIG[:dirs][:output], "runs", dir, "README.txt")
   if File.exist?(params_file)
     puts File.read(params_file)
   else
@@ -184,14 +147,22 @@ task :show_run_params do
 end
 
 
-desc "中間ファイルを削除してディスク容量を節約\n使用法: rake cleanup_intermediate [DIR=フォルダ名]"
-task :cleanup_intermediate do
-  run_dir = ENV['DIR']
-  target  = if run_dir
-              File.join(CONFIG[:dirs][:output], "runs", run_dir)
-            else
-              File.join(CONFIG[:dirs][:output], "latest")
-            end
+desc <<~DESC
+  中間ファイルを削除してディスク容量を節約
+  使用法: rake utility:cleanup_intermediate[dir]
+    dir : 対象 run フォルダ名  ※省略時: latest を対象
+  例:
+    rake utility:cleanup_intermediate[20260315_001]
+    rake utility:cleanup_intermediate
+DESC
+task :cleanup_intermediate, [:dir] do |_t, args|
+  dir = args[:dir].to_s.strip.then { |v| v.empty? ? nil : v }
+
+  target = if dir
+             File.join(CONFIG[:dirs][:output], "runs", dir)
+           else
+             File.join(CONFIG[:dirs][:output], "latest")
+           end
 
   intermediate_dir = File.join(target, "intermediate")
 

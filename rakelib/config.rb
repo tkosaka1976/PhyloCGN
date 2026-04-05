@@ -6,7 +6,7 @@ require 'bio'
 require 'tempfile'
 require 'open3'
 
-VERSION = "0.9.5"
+VERSION = "0.9.6"
 
 # =============================================================================
 # 設定セクション（ここを編集してパラメータ調整）
@@ -18,12 +18,12 @@ CONFIG = {
   files: {
     query_protein: "",
     multi_query_mfasta: "",
-    multi_primary_query_position: 0,
+    multi_primary_query_position: 1,
     accessions: "accessions.txt",
     bacteria_accessions: "bacteria_accessions.txt",
     archaea_accessions: "archaea_accessions.txt",
-    db_protein_seqs: "all_genome_proteins.mfasta",
-    diamond_db: "reference_genomes",
+    db_protein_seqs: "archaea_references.mfasta",
+    diamond_db: "archaea_references",
   },
 
   # ディレクトリ構成
@@ -39,8 +39,9 @@ CONFIG = {
   
   params_default: {
     updown: 10,
-    dist:   0.5,
+    dist:   1.0,
     score:  1.0,
+    taxonomy: "genus",
   },
 
   # Diamond検索パラメータ

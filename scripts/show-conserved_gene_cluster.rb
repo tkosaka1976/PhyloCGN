@@ -14,14 +14,16 @@ DB = Sequel.sqlite input_db
 id2genomes = Hash.new{|h,k|h[k]=[]}
 
 DB[:diamond_clusters].each do |recode|
-  id2genomes[recode[:cluster_id]] << recode[:genome_id]
+  id2genomes[recode[:clade_id]] << recode[:genome_id]
 end
 
 out_f = File.open(output_fn,"w")
-out_f.puts %w(Clade_id GCL).to_csv
+out_f.puts %w(Clade_id gene_number GCL).to_csv
+
+#p id2genomes
 
 id2genomes.each do |id, genomes|
   data = DB[:cluster_results].where(genome_id: genomes).select_map(:gene_cluster_id)
   cgc = data.tally.select{|g_c_id, size| size.to_f / genomes.size >= score_t }.map(&:first).sort
-  out_f.puts [id, cgc.join("|")].to_csv
+  out_f.puts [id, genomes.size, cgc.join("|")].to_csv
 end
