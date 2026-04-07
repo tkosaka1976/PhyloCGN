@@ -2,7 +2,7 @@
 
 ### **Discover the "Functional Partners" of Your Protein via Evolutionary Context.**
 
-**Version 0.9.6 (Beta)**  
+**Version 0.9.7 (Beta)**  
 > 💡 **Note:** This is a pre-release version. Final adjustments are ongoing.
 
 **⚠️ Caution!**
