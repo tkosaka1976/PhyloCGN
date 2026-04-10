@@ -22,8 +22,8 @@ CONFIG = {
     accessions: "accessions.txt",
     bacteria_accessions: "bacteria_accessions.txt",
     archaea_accessions: "archaea_accessions.txt",
-    db_protein_seqs: "archaea_references.mfasta",
-    diamond_db: "archaea_references",
+    db_protein_seqs: "genome_references.mfasta",
+    diamond_db: "genome_references",
   },
 
   # ディレクトリ構成
