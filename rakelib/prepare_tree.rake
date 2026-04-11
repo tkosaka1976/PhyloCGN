@@ -329,7 +329,7 @@ task :make_tree do
   sh "ruby scripts/newick-genome_db-convert.rb \
   --input #{Paths.output('diamond_hits.tree')} \
   --db #{Paths.shared('genomes.db')} \
-  --output #{Paths.output('diamond_hits-converted.tree')}"
+  --output #{Paths.output('diamond_hits-organisms_named.tree')}"
 
   Logger.success("系統樹作成完了")
 end
