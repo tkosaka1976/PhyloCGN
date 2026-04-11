@@ -147,7 +147,7 @@ task :homologs_search_single do
   -b #{CONFIG[:diamond][:block]} \
   -q #{Paths.input(query)} \
   -d #{Paths.shared(CONFIG[:files][:diamond_db])} \
-  -o #{Paths.output('diamond_results_full.tsv')} \
+  -o #{Paths.intermediate('diamond_results_full.tsv')} \
   -e #{CONFIG[:diamond][:evalue]} \
   --id #{CONFIG[:diamond][:identity]} \
   --subject-cover #{CONFIG[:diamond][:coverage]} \
@@ -156,8 +156,8 @@ task :homologs_search_single do
   --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qcovhsp"
 
   Logger.info("結果フィルタリング中...")
-  File.open(Paths.output("query_homolog_list.txt"), "w") do |f|
-    CSV.foreach(Paths.output("diamond_results_full.tsv"), col_sep: "\t") do |row|
+  File.open(Paths.intermediate("query_homolog_list.txt"), "w") do |f|
+    CSV.foreach(Paths.intermediate("diamond_results_full.tsv"), col_sep: "\t") do |row|
       if row[10].to_f <= CONFIG[:diamond][:evalue] && row[12].to_f > CONFIG[:diamond][:coverage]
         f.puts row[1]
       end
@@ -165,7 +165,7 @@ task :homologs_search_single do
   end
 
   # multiモードとファイル名を統一するためコピーを作成
-  FileUtils.cp(Paths.output("query_homolog_list.txt"), Paths.output("all_query_homolog_list.txt"))
+  FileUtils.cp(Paths.intermediate("query_homolog_list.txt"), Paths.output("all_query_homolog_list.txt"))
   Logger.info("all_query_homolog_list.txt を作成 (query_homolog_list.txt のコピー)")
 
   Logger.success("ホモログリスト作成完了 (single mode)")
@@ -196,8 +196,8 @@ task :homologs_search_multi do
     Thread.new do
       i         = entry[:index]
       entry_id  = entry[:entry_id]
-      tsv_path  = Paths.output("diamond_results_#{i}.tsv")
-      list_path = Paths.output("query_homolog_list_#{i}.txt")
+      tsv_path  = Paths.intermediate("diamond_results_#{i}.tsv")
+      list_path = Paths.intermediate("query_homolog_list_#{i}.txt")
 
       Tempfile.create(["seq_#{i}_", ".fasta"]) do |tmpfile|
         tmpfile.puts ">#{entry_id}"
@@ -242,9 +242,9 @@ task :homologs_search_multi do
   threads.each(&:join)
   raise errors.join("\n") if errors.any?
 
-  # primary query のリストを query_homolog_list.txt としてコピー
+  # primary query のリストを query_homolog_list.txt としてコピー .intermediate
   primary_idx  = CONFIG[:files][:multi_primary_query_position]
-  primary_list = Paths.output("query_homolog_list_#{primary_idx}.txt")
+  primary_list = Paths.intermediate("query_homolog_list_#{primary_idx}.txt")
   unless File.exist?(primary_list)
     raise "primary query (index: #{primary_idx}) のhomolog listが見つかりません: #{primary_list}"
   end
@@ -301,7 +301,7 @@ task :make_tree do
   Logger.step("系統樹作成")
 
   Logger.info("配列抽出中...")
-  sh "seqkit grep -f #{Paths.output('query_homolog_list.txt')} \
+  sh "seqkit grep -f #{Paths.intermediate('query_homolog_list.txt')} \
    #{Paths.shared(CONFIG[:files][:db_protein_seqs])} \
    > #{Paths.intermediate('diamond_hits.fasta')}"
 

@@ -90,6 +90,16 @@ end
 
 namespace :utility do
 
+# Condition.json を読んで表示用ハッシュを返すヘルパー
+def _load_condition(run_dir)
+  require 'json'
+  json_path = File.join(run_dir, "Condition.json")
+  return {} unless File.exist?(json_path)
+  JSON.parse(File.read(json_path), symbolize_names: true)
+rescue JSON::ParserError
+  {}
+end
+
 desc "過去の実行結果を一覧表示"
 task :list_runs do
   summary_file = File.join(CONFIG[:dirs][:output], "runs_summary.csv")
@@ -110,15 +120,14 @@ task :list_runs do
     when /^running/  then '🔄'
     else                  '❌'
     end
-    params_file = File.join(CONFIG[:dirs][:output], "runs", row['run_directory'], "Condition.txt")
-    if File.exist?(params_file)
-      lines = File.readlines(params_file)
-      extract = ->(label) { lines.find { |l| l.include?(label) }&.split(":", 2)&.last&.strip }
-      cond = "dist=#{extract.("dist")} updown=#{extract.("updown")} score=#{extract.("score")} phase=#{extract.("最終Phase")}"
+    run_dir = File.join(CONFIG[:dirs][:output], "runs", row['run_directory'])
+    cond    = _load_condition(run_dir)
+    if cond.empty?
+      cond_str = "(params不明)"
     else
-      cond = "(params不明)"
+      cond_str = "phase=#{cond[:last_phase]} updown=#{cond[:updown]} dist=#{cond[:dist]} score=#{cond[:score]}"
     end
-    puts "#{status_icon} #{row['timestamp']} | #{row['run_directory']} | #{cond}"
+    puts "#{status_icon} #{row['timestamp']} | #{row['run_directory']} | #{cond_str}"
   end
 end
 
@@ -130,6 +139,7 @@ desc <<~DESC
     rake utility:show_run_params[20260315_001]
 DESC
 task :show_run_params, [:dir] do |_t, args|
+  require 'json'
   dir = args[:dir].to_s.strip.then { |v| v.empty? ? nil : v }
 
   unless dir
@@ -139,11 +149,38 @@ task :show_run_params, [:dir] do |_t, args|
     next
   end
 
-  params_file = File.join(CONFIG[:dirs][:output], "runs", dir, "Condition.txt")
-  if File.exist?(params_file)
-    puts File.read(params_file)
+  run_dir    = File.join(CONFIG[:dirs][:output], "runs", dir)
+  json_path  = File.join(run_dir, "Condition.json")
+
+  if File.exist?(json_path)
+    cond = JSON.parse(File.read(json_path), symbolize_names: true)
+
+    puts "\n" + "=" * 70
+    puts "PhyloCGN 解析パラメータ: #{dir}"
+    puts "=" * 70
+    puts "作成日時    : #{cond[:created_at]}"
+    puts "最終更新    : #{cond[:last_updated]}"
+    puts "最終Phase   : #{cond[:last_phase]}"
+    puts "ホスト      : #{cond[:hostname]}"
+    puts ""
+    puts "【解析パラメータ】"
+    puts "  updown    : #{cond[:updown]}"
+    puts "  dist      : #{cond[:dist]}"
+    puts "  score     : #{cond[:score]}"
+    if cond[:reused_tree]
+      puts ""
+      puts "【再利用】"
+      puts "  tree 元     : #{cond[:reused_tree]}"
+    end
+    if cond[:reused_neighbor]
+      puts "  neighbor 元 : #{cond[:reused_neighbor]}"
+    end
+    puts ""
+    puts "【CONFIG (JSON全文)】"
+    puts JSON.pretty_generate(cond[:config] || {})
+    puts "=" * 70
   else
-    puts "パラメータファイルが見つかりません: #{params_file}"
+    puts "Condition.json が見つかりません: #{json_path}"
   end
 end
 

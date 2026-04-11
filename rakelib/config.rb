@@ -5,8 +5,9 @@ require 'yaml'
 require 'bio'
 require 'tempfile'
 require 'open3'
+require 'json'
 
-VERSION = "0.9.7"
+VERSION = "0.9.8"
 
 # =============================================================================
 # 設定セクション（ここを編集してパラメータ調整）
@@ -41,7 +42,7 @@ CONFIG = {
     updown: 10,
     dist:   1.0,
     score:  1.0,
-    taxonomy: "genus",
+    taxonomy: "genus", #domain kingdom phylum class order family genus species
   },
 
   # Diamond検索パラメータ
@@ -73,7 +74,6 @@ CONFIG = {
     veryfasttree: {
       model: "lg",
       gamma: true,
-      #spr: 4,
       threads: 2
     },
     muscle_version: "5",

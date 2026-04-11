@@ -93,7 +93,7 @@ end
 desc "genomic neighborhood のクラスター構築"
 task :clustering_genomic_neiborhood do
   Logger.step("近傍遺伝子クラスタリング")
-
+  
   sh "mmseqs easy-cluster \
   #{Paths.intermediate('neighborhoods_list.mfasta')} \
   #{Paths.intermediate('cluster_result')} \
@@ -123,19 +123,3 @@ task :clustering_genomic_neiborhood do
 end
 
 
-desc "遺伝子クラスターDBを構築"
-task :make_gene_cluster_db do
-  Logger.step("遺伝子クラスターデータベース構築")
-
-  db_path = Paths.intermediate("analysis.sqlite")
-
-  sh "ruby scripts/import_to_sqlite_sequel.rb \
-  --db #{db_path} \
-  --tree_clade #{Paths.output('cluster_result_gene_id.csv')} \
-  --gene_cluster #{Paths.output('diamond_hits_cut_genomeid.csv')}"
-
-  sh "ruby scripts/split_gene_ids_v2.rb \
-  --db #{db_path}"
-
-  Logger.success("データベース構築完了")
-end

@@ -82,10 +82,6 @@ task :tree_clustering, [:dist] do |_t, args|
   --input #{Paths.output('diamond_hits.tree')} \
   --output #{Paths.output('diamond_hits')}"
 
-  sh "ruby scripts/add_gcf_column.rb \
-  --input #{Paths.output('diamond_hits_cut.csv')} \
-  --output #{Paths.output('diamond_hits_cut_genomeid.csv')}"
-
   sh "ruby scripts/treetrim.rb \
   --input #{Paths.output('diamond_hits_cut.json')} \
   --output #{Paths.output('diamond_hits_cut_trim.json')}"
@@ -95,6 +91,24 @@ task :tree_clustering, [:dist] do |_t, args|
   --output #{Paths.output('diamond_hits_cut_trim.tree')}"
 
   Logger.success("クラスタリング完了")
+end
+
+
+desc "遺伝子クラスターDBを構築"
+task :make_gene_cluster_db do
+  Logger.step("遺伝子クラスターデータベース構築")
+
+  db_path = Paths.intermediate("analysis.sqlite")
+
+  sh "ruby scripts/import_to_sqlite_sequel.rb \
+  --db #{db_path} \
+  --tree_clade #{Paths.output('cluster_result_gene_id.csv')} \
+  --gene_cluster #{Paths.output('diamond_hits_cut.csv')}"
+
+  sh "ruby scripts/split_gene_ids.rb \
+  --db #{db_path}"
+
+  Logger.success("データベース構築完了")
 end
 
 
@@ -120,4 +134,18 @@ task :gene_cluster_db_analysis, [:score] do |_t, args|
   --output #{Paths.output('tree_cluster_taxonomy.csv')}"
 
   Logger.success("解析完了")
+end
+
+desc "DBにタンパク質の配列を追加"
+task :db_add_protein_seq do
+  
+  RunManager.use_latest_run!
+
+  db_path = Paths.intermediate("analysis.sqlite")
+
+  sh "ruby scripts/db_import-protein_sequence.rb \
+  --db #{db_path} \
+  --table cluster_results \
+  --download_d #{CONFIG[:dirs][:downloads]}"
+  
 end

@@ -52,7 +52,7 @@ module RunManager
       @current_run_dir = create_run_directory
     end
 
-    # neighborhood / analyze_pgc から呼ぶ（latestを使う）
+    # neighborhood / analyze_pcgn から呼ぶ（latestを使う）
     def use_latest_run!
       latest_link = File.join(CONFIG[:dirs][:output], "latest")
 
@@ -73,14 +73,31 @@ module RunManager
     end
 
     # base指定時: 指定ディレクトリからPhase1成果物をコピー
+    # 実際のファイル配置（prepare_tree.rake）に合わせたパスを使う:
+    #   homologs_search_single/multi が書き出す場所:
+    #     results/  : diamond_results_full.tsv(*), all_query_homolog_list.tsv, query_homolog_list.txt(multi only)
+    #     intermediate/ : diamond_results_full.tsv(single), query_homolog_list.txt(single),
+    #                     diamond_hits.fasta, diamond_hits.afa
+    #   make_tree が書き出す場所:
+    #     results/  : diamond_hits.tree, diamond_hits-converted.tree
+    #     intermediate/ : diamond_hits.fasta, diamond_hits.afa
+    #
+    # (*) single では intermediate に書かれるが、copy元として results を期待するため
+    #     homologs_search_single 側で results にもコピーしている前提。
+    #     → 下記コピーマップは rake ファイルの実際の出力先に合わせて修正済み。
     def copy_phase1_from!(source_dir)
       copy_files_from(source_dir, {
-        "results/diamond_results_full.tsv"  => Paths.output("diamond_results_full.tsv"),
-        "results/query_homolog_list.txt"    => Paths.output("query_homolog_list.txt"),
-        "results/all_query_homolog_list.txt" => Paths.output("all_query_homolog_list.txt"),
-        "results/diamond_hits.tree"         => Paths.output("diamond_hits.tree"),
-        "intermediate/diamond_hits.fasta"   => Paths.intermediate("diamond_hits.fasta"),
-        "intermediate/diamond_hits.afa"     => Paths.intermediate("diamond_hits.afa"),
+        # results/ に存在するもの（make_tree, homologs_search_* の出力）
+        "results/diamond_results_full.tsv"    => File.join(@current_run_dir, "results",      "diamond_results_full.tsv"),
+        "results/query_homolog_list.txt"      => File.join(@current_run_dir, "results",      "query_homolog_list.txt"),
+        "results/all_query_homolog_list.txt"  => File.join(@current_run_dir, "results",      "all_query_homolog_list.txt"),
+        "results/diamond_hits.tree"           => File.join(@current_run_dir, "results",      "diamond_hits.tree"),
+        "results/diamond_hits-converted.tree" => File.join(@current_run_dir, "results",      "diamond_hits-converted.tree"),
+        # intermediate/ に存在するもの
+        "intermediate/diamond_results_full.tsv" => File.join(@current_run_dir, "intermediate", "diamond_results_full.tsv"),
+        "intermediate/query_homolog_list.txt"   => File.join(@current_run_dir, "intermediate", "query_homolog_list.txt"),
+        "intermediate/diamond_hits.fasta"       => File.join(@current_run_dir, "intermediate", "diamond_hits.fasta"),
+        "intermediate/diamond_hits.afa"         => File.join(@current_run_dir, "intermediate", "diamond_hits.afa"),
       })
     end
 
@@ -88,12 +105,16 @@ module RunManager
     def copy_phase1_and_2_from!(source_dir)
       copy_phase1_from!(source_dir)
       copy_files_from(source_dir, {
-        "results/neighborhoods_metadata.csv"           => Paths.output("neighborhoods_metadata.csv"),
-        "results/cluster_stat_cluster_id.csv"          => Paths.output("cluster_stat_cluster_id.csv"),
-        "results/cluster_result_gene_id.csv"           => Paths.output("cluster_result_gene_id.csv"),
-        "results/cluster_representative_functions.csv" => Paths.output("cluster_representative_functions.csv"),
-        "intermediate/neighborhoods_list.txt"          => Paths.intermediate("neighborhoods_list.txt"),
-        "intermediate/neighborhoods_list.mfasta"       => Paths.intermediate("neighborhoods_list.mfasta"),
+        # results/ に存在するもの（neighborhood.rake の出力）
+        "results/neighborhoods_metadata.csv"           => File.join(@current_run_dir, "results", "neighborhoods_metadata.csv"),
+        "results/cluster_stat_cluster_id.csv"          => File.join(@current_run_dir, "results", "cluster_stat_cluster_id.csv"),
+        "results/cluster_result_gene_id.csv"           => File.join(@current_run_dir, "results", "cluster_result_gene_id.csv"),
+        "results/cluster_representative_functions.csv" => File.join(@current_run_dir, "results", "cluster_representative_functions.csv"),
+        # intermediate/ に存在するもの
+        "intermediate/neighborhoods_list.txt"    => File.join(@current_run_dir, "intermediate", "neighborhoods_list.txt"),
+        "intermediate/neighborhoods_list.mfasta" => File.join(@current_run_dir, "intermediate", "neighborhoods_list.mfasta"),
+        # clustering_genomic_neiborhood が intermediate に書くもの
+        "intermediate/cluster_result_cluster.tsv" => File.join(@current_run_dir, "intermediate", "cluster_result_cluster.tsv"),
       })
     end
 
@@ -106,30 +127,54 @@ module RunManager
     end
 
     def save_run_params(phase: nil, extra: {})
-      run_dir = current_run_dir
-      condition_file = File.join(run_dir, "Condition.txt")
+      run_dir        = current_run_dir
+      condition_file = File.join(run_dir, "Condition.json")
 
-      # 既存の Condition.txt があれば created_at だけ引き継ぐ
-      existing_created_at = if File.exist?(condition_file)
-        line = File.readlines(condition_file).find { |l| l.start_with?("作成日時") }
-        line&.split(":", 2)&.last&.strip
+      # ------------------------------------------------------------------
+      # 既存 Condition.json があれば以下を引き継ぐ:
+      #   - created_at  : 初回タイムスタンプ
+      #   - updown / dist / score : 前 phase で確定した値（今回渡されなければ流用）
+      # ------------------------------------------------------------------
+      existing = {}
+      if File.exist?(condition_file)
+        begin
+          existing = JSON.parse(File.read(condition_file), symbolize_names: true)
+        rescue JSON::ParserError
+          # 壊れていても続行
+        end
       end
 
-      params_data = {
-        last_updated:  Time.now.iso8601,
-        last_phase:    phase,
-        ruby_version:  RUBY_VERSION,
-        git_commit:    `git rev-parse HEAD 2>/dev/null`.chomp,
-        hostname:      `hostname`.chomp,
-        config:        CONFIG.reject { |k, _| k == :ncbi_api_key },
-      }.merge(extra)
+      # updown / dist / score は extra で明示された値を優先し、
+      # なければ既存 JSON の値、なければ CONFIG デフォルトを使う
+      resolved_updown = extra[:updown] || existing[:updown] || CONFIG[:params_default][:updown]
+      resolved_dist   = extra[:dist]   || existing[:dist]   || CONFIG[:params_default][:dist]
+      resolved_score  = extra[:score]  || existing[:score]  || CONFIG[:params_default][:score]
 
-      # 初回のみ作成タイムスタンプを記録
-      params_data[:created_at] = existing_created_at || Time.now.iso8601
+      # CONFIG から ncbi_api_key を除いたものを JSON 化
+      config_for_json = deep_symbolize(CONFIG).reject { |k, _| k == :ncbi_api_key }
 
-      write_condition(run_dir, params_data)
+      condition = {
+        created_at:   existing[:created_at] || Time.now.iso8601,
+        last_updated: Time.now.iso8601,
+        last_phase:   phase,
+        ruby_version: RUBY_VERSION,
+        git_commit:   `git rev-parse HEAD 2>/dev/null`.chomp,
+        hostname:     `hostname`.chomp,
+        # 解析パラメータ（途中 phase から始めた場合も含めて常に最新値を保持）
+        updown:       resolved_updown,
+        dist:         resolved_dist,
+        score:        resolved_score,
+        # 再利用情報（extra に含まれる場合のみ）
+        reused_tree:     extra[:reused_tree],
+        reused_neighbor: extra[:reused_neighbor],
+        # CONFIG 全体（ncbi_api_key を除く）
+        config: config_for_json,
+      }.compact  # nil 値（reused_* が未指定の場合）を除去
 
-      update_summary_params(params_data[:updown], params_data[:dist], params_data[:score])
+      require 'json'
+      File.write(condition_file, JSON.pretty_generate(condition))
+
+      update_summary_params(resolved_updown, resolved_dist, resolved_score)
     end
 
     def mark_completed
@@ -151,6 +196,15 @@ module RunManager
 
     private
 
+    # Hash のキーを再帰的にシンボルに変換（CONFIG は既にシンボルキーだが念のため）
+    def deep_symbolize(obj)
+      case obj
+      when Hash  then obj.transform_keys(&:to_sym).transform_values { |v| deep_symbolize(v) }
+      when Array then obj.map { |v| deep_symbolize(v) }
+      else obj
+      end
+    end
+
     def copy_files_from(source_dir, file_map)
       Logger.info("コピー元: #{File.basename(source_dir)}")
       file_map.each do |src_rel, dest|
@@ -158,9 +212,10 @@ module RunManager
         if File.exist?(src)
           FileUtils.mkdir_p(File.dirname(dest))
           FileUtils.cp(src, dest)
-          Logger.info("  ✓ #{File.basename(src_rel)}")
+          Logger.info("  ✓ #{src_rel}")
         else
-          Logger.error("  ✗ #{src_rel} が見つかりません")
+          # 存在しない場合は警告のみ（multi/single でファイル構成が違うものもある）
+          Logger.info("  - #{src_rel} (スキップ: 存在しません)")
         end
       end
     end
@@ -232,9 +287,9 @@ module RunManager
       lines = File.readlines(summary_file)
       if lines.last&.include?(File.basename(current_run_dir))
         row = lines.last.chomp.split(",")
-        row[4] = updown || CONFIG[:params_default][:updown]
-        row[5] = dist   || CONFIG[:params_default][:dist]
-        row[6] = score  || CONFIG[:params_default][:score]
+        row[4] = updown
+        row[5] = dist
+        row[6] = score
         lines[-1] = row.join(",") + "\n"
         File.write(summary_file, lines.join)
       end
@@ -255,41 +310,6 @@ module RunManager
         end
       end
       File.write(summary_file, lines.join)
-    end
-
-    def write_condition(run_dir, params)
-      File.open(File.join(run_dir, "Condition.txt"), "w") do |f|
-        f.puts "=" * 70
-        f.puts "PhyloCGN 解析実行パラメータ"
-        f.puts "=" * 70
-        f.puts "作成日時    : #{params[:created_at]}"
-        f.puts "最終更新    : #{params[:last_updated]}"
-        f.puts "最終Phase   : #{params[:last_phase]}"
-        f.puts "ホスト      : #{params[:hostname]}"
-        f.puts ""
-        f.puts "【クエリ】"
-        f.puts "  タンパク質: #{CONFIG[:files][:query_protein]}"
-        f.puts ""
-        f.puts "【Diamond検索】"
-        f.puts "  e-value   : #{CONFIG[:diamond][:evalue]}"
-        f.puts "  identity  : #{CONFIG[:diamond][:identity]}%"
-        f.puts "  coverage  : #{CONFIG[:diamond][:coverage]}%"
-        f.puts ""
-        f.puts "【ゲノム近傍解析】"
-        f.puts "  updown    : #{params[:updown] || CONFIG[:params_default][:updown]}"
-        f.puts ""
-        f.puts "【クラスタリング / 解析】"
-        f.puts "  dist      : #{params[:dist]  || CONFIG[:params_default][:dist]}"
-        f.puts "  score     : #{params[:score] || CONFIG[:params_default][:score]}"
-        f.puts ""
-        if params[:reused_tree]
-          f.puts "【再利用】"
-          f.puts "  tree 元   : #{params[:reused_tree]}"
-        end
-        if params[:reused_neighbor]
-          f.puts "  neighbor 元: #{params[:reused_neighbor]}"
-        end
-      end
     end
 
   end

@@ -4,18 +4,14 @@ require 'optparse'
 
 params = ARGV.getopts("","input:","output:","downloads_d:")
 
-in_fn = params["input"]
-# Representative_ID	Cluster_Size	gene_cluster_id
-
-
 ids = Hash.new
-CSV.foreach(in_fn,headers:true) do |row|
+CSV.foreach(params["input"], headers:true) do |row|
   row["Representative_ID"] =~ /(GCF\_\d{9}\.\d)\_([YWN]P\_\d{6,9}\.\d)/
   ids[$2] = $1
 end
 
 out_f = File.open(params["output"],"w")
-out_f.puts %w(cluster_id protein_accession product).to_csv
+out_f.puts %w(gene_cluster_id protein_accession product).to_csv
 ids.compact!
 
 ids.each_with_index do |(gene,genome),i|

@@ -47,7 +47,7 @@ DB.create_table! :diamond_clusters do
   Integer :clade_id
   String  :color_hex
   Float   :diameter
-  String  :assembly_accession
+  #String  :assembly_accession
   
   # 結合(JOIN)を高速にするためのインデックス
   index :sequence_id
@@ -83,7 +83,7 @@ def import_csv(db, table_name, file_path)
       data[:clade_id]       = row["Clade_ID"].to_i
       data[:color_hex]        = row["Color_Hex"]
       data[:diameter]         = row["Clade_AvgPairDist"].to_f
-      data[:assembly_accession] = row["Assembly_Accession"]
+      #data[:assembly_accession] = row["Assembly_Accession"]
     end
     
     rows << data
