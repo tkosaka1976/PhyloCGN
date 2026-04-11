@@ -3,7 +3,7 @@
 ### **Discover the "Functional Partners" of Your Protein via Evolutionary Context.**
 
 **Version 0.9.8 (Beta 2)**  
-> 💡 **Note:** This is a nearly pre-release version.
+> 💡 **Note:** This is a nearly release version.
 
 **⚠️ Caution!**
 Please use over **v0.9.5** because the tree clustering algorithm was misconstructed. Before the version, the algorithm used was max_clade, not avg_clade. Now be ave_clade calculation.
