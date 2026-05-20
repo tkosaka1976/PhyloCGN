@@ -1,0 +1,47 @@
+# PhyloCGN 解析条件テンプレート
+# このファイルをコピーして input/condition.yaml として使用してください
+# cp input/condition_template.yaml input/condition.yaml
+
+# 入力ファイル（input/ ディレクトリからの相対パス）
+files:
+  query_protein: ""
+  multi_query_mfasta: ""
+  multi_primary_query_position: 1
+  accessions: "accessions.txt"
+  bacteria_accessions: "bacteria_accessions.txt"
+  archaea_accessions: "archaea_accessions.txt"
+  db_protein_seqs: "genome_references.mfasta"
+  diamond_db: "genome_references"
+
+# デフォルトパラメーター (do_all 用)
+params_default:
+  updown: 10
+  dist: 1.0
+  score: 1.0
+  taxonomy: "genus"   # domain / kingdom / phylum / class / order / family / genus / species
+
+# Diamond 検索パラメータ
+diamond:
+  subject_size: 0     # 0: infinity
+  block: 0.7
+  evalue: 1.0e-10
+  coverage: 80
+  identity: 30
+  sensitivity: "fast" # fast / mid-sensitive / very-sensitive / ultra-sensitive
+
+# mmseqs クラスタリングパラメータ
+mmseqs:
+  cluster_mode: 1
+  sensitivity: 7.5
+  identity: 0.3
+  coverage: 0.6
+
+# ツール設定
+tools:
+  veryfasttree:
+    model: "lg"
+    gamma: true
+    threads: 2
+  muscle_version: "5"
+  muscle:
+    super5_threshold: 100
