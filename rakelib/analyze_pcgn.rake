@@ -82,8 +82,10 @@ task :tree_clustering, [:dist] do |_t, args|
   --input #{Paths.output('diamond_hits.tree')} \
   --output #{Paths.output('diamond_hits')}"
 
+  # trim_draw_mode(length): max, avg, min
   sh "ruby scripts/treetrim.rb \
   --input #{Paths.output('diamond_hits_cut.json')} \
+  --mode max \
   --output #{Paths.output('diamond_hits_cut_trim.json')}"
 
   sh "ruby scripts/json2newick.rb \
@@ -147,5 +149,20 @@ task :db_add_protein_seq do
   --db #{db_path} \
   --table cluster_results \
   --download_d #{CONFIG[:dirs][:downloads]}"
+  
+end
+
+desc <<~DESC
+This task requres instration of ggtree package via bioconductor.
+please set up R and install ggtree.
+DESC
+task :tree_colored_by_clades do
+  
+  RunManager.use_latest_run!
+
+  sh "rscript scripts/tree_colored_by_clades.r \
+  --nwk #{Paths.output('diamond_hits.tree')} \
+  --info #{Paths.output('diamond_hits_cut.csv')} \
+  --outpng #{Paths.output('colored_tree_via_clades.png')}"
   
 end

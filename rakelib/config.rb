@@ -7,7 +7,7 @@ require 'tempfile'
 require 'open3'
 require 'json'
 
-VERSION = "0.9.8"
+VERSION = "0.9.9"
 
 # =============================================================================
 # 解析条件は input/condition.yaml を編集してください
