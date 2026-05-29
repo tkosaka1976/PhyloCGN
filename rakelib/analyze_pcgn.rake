@@ -166,3 +166,38 @@ task :tree_colored_by_clades do
   --outpng #{Paths.output('colored_tree_via_clades.png')}"
   
 end
+
+desc <<~DESC
+This task show query representative hit and its including clade.
+rake :show_query_info[query]
+DESC
+task :show_query_info, [:query] do |_t, args|
+  
+  RunManager.use_latest_run!
+  
+  unless args[:query]
+    
+    hit = File.open(Paths.output('all_query_homolog_list.txt')){ it.readline }.chomp
+
+    sh "ruby scripts/show_query_info.rb \
+    --query #{hit} \
+    --info #{Paths.output('diamond_hits_cut.csv')}"
+  else
+    sh "ruby scripts/show_query_info.rb \
+    --query #{args[:query]} \
+    --info #{Paths.output('diamond_hits_cut.csv')}"
+  end
+  
+end
+
+#using diamond for query search in DB
+#diamond blastp -d shared_resources/genome_references.dmnd -k 1 --fast -q input/.fasta
+#echo -e ">test_query\nMVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTTKTYFPHFDLSHGSAQVKGHG" | diamond blastp -d shared_resources/genome_references.dmnd -k 1 --fast
+#diamond blastp -d shared_resources/genome_references.dmnd -k 1 --fast -q - <<'EOF'
+#>query_1
+#MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTTKTYFPHFDLS
+#>query_2
+#MELVLKDAEIAKIKEELEAEQAEVEAEIEEERKKKEEEEEEKKKEEEEEE
+#EOF
+#
+
